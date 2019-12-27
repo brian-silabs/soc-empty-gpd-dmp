@@ -1,5 +1,7 @@
 
 #include "gpd-apps-rtos-main.h"
+#include "gpd-components-common.h"
+#include "gpd-callbacks.h"
 
 /**************************************************************************//**
  * Proprietary Application task.
@@ -15,7 +17,17 @@ static void greenPowerAppTask(void *p_arg)
   PP_UNUSED_PARAM(p_arg);
   RTOS_ERR err;
 
-  
+  // Initialise NV
+  emberGpdNvInit();//TODO as we are relying on the BLE stack NVM, need to make sure it was init first
+
+  // Initialise timer for rxOffset timing during rxAfterTx
+  emberGpdLeTimerInit();
+
+  // Initialise Radio
+  emberGpdRadioInit();
+
+  //Initialise the Gpd
+  EmberGpd_t * gpd = emberGpdInit();
 
   while (DEF_TRUE) {
     // Wait for the dummy flag. Use this flag to stop waiting with the execution of your code.
@@ -28,8 +40,9 @@ static void greenPowerAppTask(void *p_arg)
                NULL,
                &err);
     APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(err) == RTOS_ERR_NONE), 1);
-    //
-    // Put your code here!
-    //
+    
+    // Call user to implement rest of the thing
+    emberGpdAfPluginMainCallback(gpd);
+    
   }
 }
