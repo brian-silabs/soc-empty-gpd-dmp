@@ -49,18 +49,20 @@ void greenPowerAppTask(void *p_arg)
 
   while (DEF_TRUE) {
     // Wait for the dummy flag. Use this flag to stop waiting with the execution of your code.
-    OSFlagPend(&proprietary_event_flags,
-               DUMMY_FLAG,
-               (OS_TICK)0,
-               OS_OPT_PEND_BLOCKING       \
-               + OS_OPT_PEND_FLAG_SET_ANY \
-               + OS_OPT_PEND_FLAG_CONSUME,
-               NULL,
-               &err);
+	// Call user to implement rest of the thing
+	emberGpdAfPluginMainCallback(gpdContext);
+	OSTimeDlyHMSM(0,0,0,250,OS_OPT_TIME_HMSM_STRICT,&err);
+//    OSFlagPend(&proprietary_event_flags,
+//               DUMMY_FLAG,
+//               (OS_TICK)0,
+//               OS_OPT_PEND_BLOCKING       \
+//               + OS_OPT_PEND_FLAG_SET_ANY \
+//               + OS_OPT_PEND_FLAG_CONSUME,
+//               NULL,
+//               &err);
     APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(err) == RTOS_ERR_NONE), 1);
     
-    // Call user to implement rest of the thing
-    emberGpdAfPluginMainCallback(gpdContext);
     
+
   }
 }

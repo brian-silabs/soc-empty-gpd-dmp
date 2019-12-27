@@ -387,16 +387,16 @@ void emberGpdAfPluginMainCallback(EmberGpd_t * gpd)
 
   // Loop forever
   //while (true) {
-    if (buttonPressed) {
-      if (buttonPin == BSP_BUTTON0_PIN) {
+//    if (buttonPressed) {
+//      if (buttonPin == BSP_BUTTON0_PIN) {
         emberGpdAfPluginCommission(gpd);
-      } else if (buttonPin == BSP_BUTTON1_PIN) {
-        sendToggle(gpd);
-      }
-      emberGpdStoreSecDataToNV(gpd);
-      buttonPin = 0;
-      buttonPressed = false;
-    }
+//      } else if (buttonPin == BSP_BUTTON1_PIN) {
+//        sendToggle(gpd);
+//      }
+//      emberGpdStoreSecDataToNV(gpd);
+//      buttonPin = 0;
+//      buttonPressed = false;
+//    }
 //    uint32_t expiredTime = appTimeCount - button0LongPressTimerStartValue;
 //    if (button0LongPressTimerStartValue
 //        && expiredTime > GPD_APP_BUTTON_LONG_PRESS_TIME_IN_QS) {
