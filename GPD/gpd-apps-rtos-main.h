@@ -14,7 +14,8 @@ static void    greenPowerAppTask(void *p_arg);
 OS_FLAG_GRP  proprietary_event_flags;
 /* Dummy flag to prevent cyclic execution of the proprietary task function code.
  * this flag will not be posted by default. */
-#define DUMMY_FLAG  ((OS_FLAGS)0x01)
+#define INIT_FLAG  ((OS_FLAGS)0x01)
+#define DUMMY_FLAG  ((OS_FLAGS)0x02)
 
 
 // Proprietary radio

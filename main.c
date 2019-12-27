@@ -379,6 +379,13 @@ static void bluetoothAppTask(void *p_arg)
                                                      le_gap_general_discoverable,
                                                      le_gap_connectable_scannable);
         APP_ASSERT_DBG((pRspAdv->result == bg_err_success), pRspAdv->result);
+        
+        //Enable the GPD stack
+        // OSFlagPost(&proprietary_event_flags,
+        //        (OS_FLAGS)INIT_FLAG,
+        //        OS_OPT_POST_FLAG_SET,
+        //        &osErr);
+        // APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
         break;
 
       case gecko_evt_le_connection_closed_id:
