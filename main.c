@@ -64,6 +64,8 @@
 	#include MBEDTLS_CONFIG_FILE
 #endif
 
+#include "mbedtls/threading.h"
+
 // Ex Main Start task
 #define EX_MAIN_START_TASK_PRIO           21u
 #define EX_MAIN_START_TASK_STK_SIZE       512u
@@ -276,6 +278,7 @@ void OSIdleEnterHook(void)
  ******************************************************************************/
 static errorcode_t initialize_bluetooth()
 {
+  THREADING_setup();
   errorcode_t err = gecko_init(&bluetooth_config);
   if (err == bg_err_success) {
     gecko_init_multiprotocol(NULL);

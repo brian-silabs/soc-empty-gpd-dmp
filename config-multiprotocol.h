@@ -102,8 +102,8 @@ void *bg_calloc(size_t num, size_t size);
 #undef MBEDTLS_FS_IO
 #define MBEDTLS_PLATFORM_C
 #define MBEDTLS_PLATFORM_MEMORY
-#define MBEDTLS_PLATFORM_CALLOC_MACRO  bg_calloc /**< Default allocator macro to use, can be undefined */
-#define MBEDTLS_PLATFORM_FREE_MACRO    bg_free /**< Default free macro to use, can be undefined */
+#define MBEDTLS_PLATFORM_CALLOC_MACRO  sl_calloc /**< Default allocator macro to use, can be undefined */
+#define MBEDTLS_PLATFORM_FREE_MACRO    sl_free /**< Default free macro to use, can be undefined */
 
 /* Save RAM at the expense of ROM */
 #define MBEDTLS_AES_ROM_TABLES
