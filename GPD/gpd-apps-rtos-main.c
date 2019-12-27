@@ -1,4 +1,13 @@
 
+#include <common/include/common.h>
+#include <common/include/lib_def.h>
+#include <common/include/rtos_utils.h>
+#include <common/include/toolchains.h>
+#include <common/include/rtos_prio.h>
+#include <common/include/platform_mgr.h>
+#include <cpu/include/cpu.h>
+#include <kernel/include/os.h>
+
 #include "gpd-apps-rtos-main.h"
 #include "gpd-components-common.h"
 #include "gpd-callbacks.h"
@@ -12,7 +21,7 @@
  * This is a minimal Proprietary Application task that only configures the
  * radio.
  *****************************************************************************/
-static void greenPowerAppTask(void *p_arg)
+void greenPowerAppTask(void *p_arg)
 {
   PP_UNUSED_PARAM(p_arg);
   RTOS_ERR err;
@@ -36,7 +45,7 @@ static void greenPowerAppTask(void *p_arg)
   emberGpdRadioInit();
 
   //Initialise the Gpd
-  EmberGpd_t * gpd = emberGpdInit();
+  EmberGpd_t * gpdContext = emberGpdInit();
 
   while (DEF_TRUE) {
     // Wait for the dummy flag. Use this flag to stop waiting with the execution of your code.
@@ -51,7 +60,7 @@ static void greenPowerAppTask(void *p_arg)
     APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(err) == RTOS_ERR_NONE), 1);
     
     // Call user to implement rest of the thing
-    emberGpdAfPluginMainCallback(gpd);
+    emberGpdAfPluginMainCallback(gpdContext);
     
   }
 }

@@ -20,9 +20,12 @@
 static void RAILCb_Generic(RAIL_Handle_t railHandle, RAIL_Events_t events);
 
 static RAIL_Handle_t railHandle = NULL;
+static RAILSched_Config_t railSchedState;
 static bool     rfReady = false;
 static RAIL_Config_t railCfg = {
   .eventsCallback = &RAILCb_Generic,
+  .protocol = NULL,
+  .scheduler = &railSchedState
 };
 
 static uint8_t railTxFifo[GP_FIFO_SIZE];
@@ -125,12 +128,15 @@ void emberGpdRadioInit(void)
     while (true) ;
   }
 
+#ifdef DMP_GPD // TODO
+  //In multiprotocol, RAIL currently shares one receive FIFO across all protocols. This function will return RAIL_STATUS_INVALID_STATE if the requested RAIL_Handle_t is not active.
   // Set RX FIFO, and verify that the size is correct
   RAIL_Status_t status = RAIL_SetRxFifo(railHandle, railRxFifo, &fifoSize);
   if (fifoSize != GP_FIFO_SIZE
       || !(status == RAIL_STATUS_NO_ERROR)) {
     while (true) ;
   }
+#endif
 
   // Initialise Radio Calibrations
   if (RAIL_ConfigCal(railHandle, RAIL_CAL_ALL) != RAIL_STATUS_NO_ERROR) {

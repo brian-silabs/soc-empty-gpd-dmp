@@ -372,20 +372,20 @@ static void bluetoothAppTask(void *p_arg)
         // The next two parameters are minimum and maximum advertising
         // interval, both in units of (milliseconds * 1.6).
         // The last two parameters are duration and maxevents left as default.
-        pRspAdvT = gecko_cmd_le_gap_set_advertise_timing(0, 160, 160, 0, 0);
-        APP_ASSERT_DBG((pRspAdvT->result == bg_err_success), pRspAdvT->result);
-        // Start general advertising and enable connections.
-        pRspAdv = gecko_cmd_le_gap_start_advertising(0,
-                                                     le_gap_general_discoverable,
-                                                     le_gap_connectable_scannable);
-        APP_ASSERT_DBG((pRspAdv->result == bg_err_success), pRspAdv->result);
+//        pRspAdvT = gecko_cmd_le_gap_set_advertise_timing(0, 160, 160, 0, 0);
+//        APP_ASSERT_DBG((pRspAdvT->result == bg_err_success), pRspAdvT->result);
+//        // Start general advertising and enable connections.
+//        pRspAdv = gecko_cmd_le_gap_start_advertising(0,
+//                                                     le_gap_general_discoverable,
+//                                                     le_gap_connectable_scannable);
+//        APP_ASSERT_DBG((pRspAdv->result == bg_err_success), pRspAdv->result);
         
         //Enable the GPD stack
-        // OSFlagPost(&proprietary_event_flags,
-        //        (OS_FLAGS)INIT_FLAG,
-        //        OS_OPT_POST_FLAG_SET,
-        //        &osErr);
-        // APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
+         OSFlagPost(&proprietary_event_flags,
+                (OS_FLAGS)INIT_FLAG,
+                OS_OPT_POST_FLAG_SET,
+                &osErr);
+         APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
         break;
 
       case gecko_evt_le_connection_closed_id:

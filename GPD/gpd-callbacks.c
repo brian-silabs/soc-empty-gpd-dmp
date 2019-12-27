@@ -76,7 +76,7 @@ void emberGpdAfPluginNvInitCallback(void)
 }
 
 /** @brief Called to the application to give a chance to load or store the GPD Context
- *.        in a non volatile context. Thsi can help the application to use any other
+ *.        in a non volatile context. This can help the application to use any other
  *         non volatile storage.
  *
  * @param nvmData The pointer to the data that needs saving or retrieving to or from
@@ -92,6 +92,7 @@ bool emberGpdAfPluginNvSaveAndLoadCallback(EmberGpd_t * gpd,
                                            uint8_t sizeOfNvmData,
                                            EmebrGpdNvLoadStore_t loadStore)
 {
+  //Load data from NVM
   if (loadStore == EMEBER_GPD_AF_CALLBACK_LOAD_GPD_FROM_NVM) {
   #if defined EMBER_AF_PLUGIN_PSSTORE
     if (0 != store_read(EMBER_GPD_NV_DATA_TAG, &flags, &length, &p)) {
@@ -133,6 +134,8 @@ bool emberGpdAfPluginNvSaveAndLoadCallback(EmberGpd_t * gpd,
                     sizeOfNvmData);
     }
   #endif
+
+  //Store data to NVM
   } else if (loadStore == EMEBER_GPD_AF_CALLBACK_STORE_GPD_TO_NVM) {
   #if defined EMBER_AF_PLUGIN_PSSTORE
     store_write(EMBER_GPD_NV_DATA_TAG,
@@ -261,9 +264,9 @@ static void gpdEnterLowPowerMode(bool forceEm4)
     em4Init.pinRetentionMode = emuPinRetentionLatch;
     em4Init.em4State = emuEM4Shutoff;
     EMU_EM4Init(&em4Init);
-    SLEEP_ForceSleepInEM4();
+    //SLEEP_ForceSleepInEM4();
   } else {
-    SLEEP_Sleep();
+    //SLEEP_Sleep();
   }
 }
 // Application base loop timing with sleep
@@ -364,36 +367,36 @@ static void sendToggle(EmberGpd_t * gpd)
  */
 void emberGpdAfPluginMainCallback(EmberGpd_t * gpd)
 {
-  // Initialise timer for application state machine with sleep consideration
-  emberGpdCryoTimerInit();
-
-  // Enable the buttons on the board
-  for (int i = 0; i < BSP_NO_OF_BUTTONS; i++) {
-    GPIO_PinModeSet(buttonArray[i].port, buttonArray[i].pin, gpioModeInputPull, 1);
-  }
-
-  // Button Interrupt Config
-  GPIOINT_Init();
-  GPIOINT_CallbackRegister(buttonArray[0].pin, gpioCallback);
-  GPIOINT_CallbackRegister(buttonArray[1].pin, gpioCallback);
-  GPIO_IntConfig(buttonArray[0].port, buttonArray[0].pin, true, true, true);
-  GPIO_IntConfig(buttonArray[1].port, buttonArray[1].pin, false, true, true);
-
-  buttonPressed = false;
-  buttonPin = 0;
+//  // Initialise timer for application state machine with sleep consideration
+//  emberGpdCryoTimerInit();
+//
+//  // Enable the buttons on the board
+//  for (int i = 0; i < BSP_NO_OF_BUTTONS; i++) {
+//    GPIO_PinModeSet(buttonArray[i].port, buttonArray[i].pin, gpioModeInputPull, 1);
+//  }
+//
+//  // Button Interrupt Config
+//  GPIOINT_Init();
+//  GPIOINT_CallbackRegister(buttonArray[0].pin, gpioCallback);
+//  GPIOINT_CallbackRegister(buttonArray[1].pin, gpioCallback);
+//  GPIO_IntConfig(buttonArray[0].port, buttonArray[0].pin, true, true, true);
+//  GPIO_IntConfig(buttonArray[1].port, buttonArray[1].pin, false, true, true);
+//
+//  buttonPressed = false;
+//  buttonPin = 0;
 
   // Loop forever
-  while (true) {
-//    if (buttonPressed) {
-//      if (buttonPin == BSP_BUTTON0_PIN) {
-//        emberGpdAfPluginCommission(gpd);
-//      } else if (buttonPin == BSP_BUTTON1_PIN) {
-//        sendToggle(gpd);
-//      }
-//      emberGpdStoreSecDataToNV(gpd);
-//      buttonPin = 0;
-//      buttonPressed = false;
-//    }
+  //while (true) {
+    if (buttonPressed) {
+      if (buttonPin == BSP_BUTTON0_PIN) {
+        emberGpdAfPluginCommission(gpd);
+      } else if (buttonPin == BSP_BUTTON1_PIN) {
+        sendToggle(gpd);
+      }
+      emberGpdStoreSecDataToNV(gpd);
+      buttonPin = 0;
+      buttonPressed = false;
+    }
 //    uint32_t expiredTime = appTimeCount - button0LongPressTimerStartValue;
 //    if (button0LongPressTimerStartValue
 //        && expiredTime > GPD_APP_BUTTON_LONG_PRESS_TIME_IN_QS) {
@@ -404,7 +407,7 @@ void emberGpdAfPluginMainCallback(EmberGpd_t * gpd)
 //    bool enterEm4 = (((appTimeCount > GPD_APP_TIME_IN_QS_TO_ENTER_EM4) \
 //                      && (GPD_APP_TIME_IN_QS_TO_ENTER_EM4 != 0xFF)) ? true : false);
 //    gpdSleepWithTimer(enterEm4);
-  }
+  //}
 }
 // ----------------------------------------------------------------------------
 // ------------ END : Application main loop -----------------------------------
