@@ -19,8 +19,10 @@ void    greenPowerAppTask(void *p_arg);
 OS_FLAG_GRP  proprietary_event_flags;
 /* Dummy flag to prevent cyclic execution of the proprietary task function code.
  * this flag will not be posted by default. */
-#define INIT_FLAG  ((OS_FLAGS)0x01)
-#define DUMMY_FLAG  ((OS_FLAGS)0x02)
+#define INIT_FLAG               ((OS_FLAGS)0x01)
+#define COMMISSIONING_FLAG      ((OS_FLAGS)0x02)
+#define DECOMMISSIONING_FLAG    ((OS_FLAGS)0x04)
+#define OPERATE_FLAG            ((OS_FLAGS)0x08)
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -28,19 +30,8 @@ OS_FLAG_GRP  proprietary_event_flags;
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#define GREEN_POWER_PSSTORE_BASE 			0x4050
-#define GREEN_POWER_PSSTORE_TAG_KEY  		0x4050
-#define GREEN_POWER_PSSTORE_CONTEXT_KEY  	0x4051
-
-//// Proprietary radio
-//static RAIL_Handle_t railHandle = NULL;
-//static RAILSched_Config_t railSchedState;
-//static void radioEventHandler(RAIL_Handle_t railHandle,
-//                              RAIL_Events_t events);
-//static RAIL_Config_t railCfg = {
-//  .eventsCallback = &radioEventHandler,
-//  .protocol = NULL,
-//  .scheduler = &railSchedState,
-//};
+#define GREEN_POWER_PSSTORE_BASE            0x4050
+#define GREEN_POWER_PSSTORE_TAG_KEY         0x4050
+#define GREEN_POWER_PSSTORE_CONTEXT_KEY     0x4051
 
 #endif

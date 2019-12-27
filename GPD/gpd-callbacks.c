@@ -226,123 +226,6 @@ void emberGpdAfPluginSleepCallback(void)
 // ----------------------------------------------------------------------------
 
 // ----------------------------------------------------------------------------
-// 3. Application main loop timing with application timer
-//               -- Series 1 : Cryotimer
-//               -- Series 2 : RTCC
-// ----------------------------------------------------------------------------
-#if defined EFR32_SERIES1_CONFIG2_MICRO
-static volatile uint32_t appTimeCount;
-#else
-#define appTimeCount (RAIL_GetTime() / 250000)
-#endif
-
-static void emberGpdCryoTimerInit(void)
-{
-  #if EFR32_SERIES1_CONFIG2_MICRO
-  CMU_ClockEnable(cmuClock_CRYOTIMER, true);
-  CRYOTIMER_Init_TypeDef  cryoInit = CRYOTIMER_INIT_DEFAULT;
-  cryoInit.enable = false;
-  cryoInit.osc = cryotimerOscULFRCO;
-  cryoInit.presc = cryotimerPresc_1;
-  cryoInit.period = cryotimerPeriod_256; //about 0.25s
-  cryoInit.em4Wakeup = true;
-  CRYOTIMER_Init(&cryoInit);
-
-  NVIC_ClearPendingIRQ(CRYOTIMER_IRQn);
-  NVIC_EnableIRQ(CRYOTIMER_IRQn);
-  CRYOTIMER_IntClear(CRYOTIMER_IF_PERIOD);
-  CRYOTIMER_IntDisable(CRYOTIMER_IEN_PERIOD);
-  #endif
-}
-
-// Low Power Mode with option to force EM4 mode.
-static void gpdEnterLowPowerMode(bool forceEm4)
-{
-  EMU_EM4Init_TypeDef em4Init = EMU_EM4INIT_DEFAULT;
-  if (forceEm4) {
-    em4Init.retainLfxo = true;
-    em4Init.pinRetentionMode = emuPinRetentionLatch;
-    em4Init.em4State = emuEM4Shutoff;
-    EMU_EM4Init(&em4Init);
-    //SLEEP_ForceSleepInEM4();
-  } else {
-    //SLEEP_Sleep();
-  }
-}
-// Application base loop timing with sleep
-static void gpdSleepWithTimer(bool forceEm4)
-{
-#if defined EFR32_SERIES1_CONFIG2_MICRO
-  // Start the Timer
-  CRYOTIMER_IntClear(CRYOTIMER_IEN_PERIOD);
-  CRYOTIMER_IntEnable(CRYOTIMER_IEN_PERIOD);
-  CRYOTIMER_Enable(true);
-#endif
-  //Sleep when the device is commissioned
-  // TODO : pass the flag based on the GPD state
-  gpdEnterLowPowerMode(forceEm4);
-}
-
-// Cryotimer Intterrupt
-void CRYOTIMER_IRQHandler(void)
-{
-#if defined EFR32_SERIES1_CONFIG2_MICRO
-  CRYOTIMER_IntClear(CRYOTIMER_IF_PERIOD);
-  appTimeCount++;
-  __DSB();
-#endif
-}
-// ----------------------------------------------------------------------------
-// ----------- END : Application main loop timing -----------------------------
-// ----------------------------------------------------------------------------
-
-// ----------------------------------------------------------------------------
-// -------------- 4. Application Button ---------------------------------------
-// ----------------------------------------------------------------------------
-#define BUTTON_PRESSED  1
-#define BUTTON_RELEASED 0
-
-// Type defines
-typedef struct ButtonArray{
-  GPIO_Port_TypeDef   port;
-  unsigned int        pin;
-} ButtonArray_t;
-
-static const ButtonArray_t buttonArray[BSP_NO_OF_BUTTONS] = BSP_GPIO_BUTTONARRAY_INIT;
-static bool buttonPressed = false;
-static unsigned int buttonPin = 0;
-static uint32_t button0LongPressTimerStartValue = 0;
-
-static void gpioCallback(uint8_t pin)
-{
-  // Check if any of the button pressed
-  uint8_t buttonState = (GPIO_PinInGet(buttonArray[0].port, buttonArray[0].pin)) \
-                        ? BUTTON_RELEASED : BUTTON_PRESSED;
-  buttonState |= (GPIO_PinInGet(buttonArray[1].port, buttonArray[1].pin)) \
-                 ? BUTTON_RELEASED : BUTTON_PRESSED;
-  if (buttonState == BUTTON_PRESSED) {
-    if (BSP_BUTTON0_PIN == pin) {
-      // load a timer to count long press
-      button0LongPressTimerStartValue = appTimeCount;
-      buttonPressed = true;
-      buttonPin = BSP_BUTTON0_PIN;
-    } else if (BSP_BUTTON1_PIN == pin) {
-      buttonPressed = true;
-      buttonPin = BSP_BUTTON1_PIN;
-    }
-  } else {
-    // Button released
-    if (BSP_BUTTON0_PIN == pin) {
-      button0LongPressTimerStartValue = 0;
-    } else if (BSP_BUTTON1_PIN == pin) {
-    }
-  }
-}
-// ----------------------------------------------------------------------------
-// ----------- END : Application Button ---------------------------------------
-// ----------------------------------------------------------------------------
-
-// ----------------------------------------------------------------------------
 // ------------Sending an operational command ---------------------------------
 // ----------------------------------------------------------------------------
 static void sendToggle(EmberGpd_t * gpd)
@@ -367,47 +250,35 @@ static void sendToggle(EmberGpd_t * gpd)
  */
 void emberGpdAfPluginMainCallback(EmberGpd_t * gpd)
 {
-//  // Initialise timer for application state machine with sleep consideration
-//  emberGpdCryoTimerInit();
-//
-//  // Enable the buttons on the board
-//  for (int i = 0; i < BSP_NO_OF_BUTTONS; i++) {
-//    GPIO_PinModeSet(buttonArray[i].port, buttonArray[i].pin, gpioModeInputPull, 1);
-//  }
-//
-//  // Button Interrupt Config
-//  GPIOINT_Init();
-//  GPIOINT_CallbackRegister(buttonArray[0].pin, gpioCallback);
-//  GPIOINT_CallbackRegister(buttonArray[1].pin, gpioCallback);
-//  GPIO_IntConfig(buttonArray[0].port, buttonArray[0].pin, true, true, true);
-//  GPIO_IntConfig(buttonArray[1].port, buttonArray[1].pin, false, true, true);
-//
-//  buttonPressed = false;
-//  buttonPin = 0;
 
-  // Loop forever
-  //while (true) {
-//    if (buttonPressed) {
-//      if (buttonPin == BSP_BUTTON0_PIN) {
+switch (gpd->gpdState)
+{
+    case EMBER_GPD_APP_STATE_NOT_COMMISSIONED :
+    case EMBER_GPD_APP_STATE_CHANNEL_REQUEST :
+    case EMBER_GPD_APP_STATE_CHANNEL_RECEIVED :
+    case EMBER_GPD_APP_STATE_COMMISSIONING_REQUEST :
+    case EMBER_GPD_APP_STATE_COMMISSIONING_REPLY_RECIEVED :
+    case EMBER_GPD_APP_STATE_COMMISSIONING_SUCCESS_REQUEST :
         emberGpdAfPluginCommission(gpd);
-//      } else if (buttonPin == BSP_BUTTON1_PIN) {
-//        sendToggle(gpd);
-//      }
-//      emberGpdStoreSecDataToNV(gpd);
-//      buttonPin = 0;
-//      buttonPressed = false;
-//    }
-//    uint32_t expiredTime = appTimeCount - button0LongPressTimerStartValue;
-//    if (button0LongPressTimerStartValue
-//        && expiredTime > GPD_APP_BUTTON_LONG_PRESS_TIME_IN_QS) {
-//      button0LongPressTimerStartValue = 0;
-//      emberGpdAfPluginDeCommission(gpd);
-//    }
-//    // Enter sleep with timer untill time to enter EM4
-//    bool enterEm4 = (((appTimeCount > GPD_APP_TIME_IN_QS_TO_ENTER_EM4) \
-//                      && (GPD_APP_TIME_IN_QS_TO_ENTER_EM4 != 0xFF)) ? true : false);
-//    gpdSleepWithTimer(enterEm4);
-  //}
+        emberGpdStoreSecDataToNV(gpd);
+        break;
+
+    case EMBER_GPD_APP_STATE_OPERATIONAL :
+    case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_REQUEST :
+    case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_RECEIVED :
+        sendToggle(gpd);
+        emberGpdStoreSecDataToNV(gpd);
+        break;
+
+    case EMBER_GPD_APP_STATE_INVALID :
+        emberGpdAfPluginDeCommission(gpd);
+        break;
+
+    default:
+        //Wait for next external event
+        break;
+}
+
 }
 // ----------------------------------------------------------------------------
 // ------------ END : Application main loop -----------------------------------

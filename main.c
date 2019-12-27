@@ -367,6 +367,13 @@ static void bluetoothAppTask(void *p_arg)
       // Here the system is set to start advertising immediately after boot
       // procedure.
       case gecko_evt_system_boot_id:
+         //Enable the GPD stack
+         OSFlagPost(&proprietary_event_flags,
+                (OS_FLAGS)INIT_FLAG,
+                OS_OPT_POST_FLAG_SET,
+                &osErr);
+         APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
+
         // Set advertising parameters. 100ms advertisement interval.
         // The first parameter is advertising set handle
         // The next two parameters are minimum and maximum advertising
@@ -379,13 +386,6 @@ static void bluetoothAppTask(void *p_arg)
 //                                                     le_gap_general_discoverable,
 //                                                     le_gap_connectable_scannable);
 //        APP_ASSERT_DBG((pRspAdv->result == bg_err_success), pRspAdv->result);
-        
-        //Enable the GPD stack
-         OSFlagPost(&proprietary_event_flags,
-                (OS_FLAGS)INIT_FLAG,
-                OS_OPT_POST_FLAG_SET,
-                &osErr);
-         APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
         break;
 
       case gecko_evt_le_connection_closed_id:
@@ -402,11 +402,31 @@ static void bluetoothAppTask(void *p_arg)
         }
         break;
 
-      // Events related to OTA upgrading
-      // Check if the user-type OTA Control Characteristic was written.
-      // If ota_control was written, boot the device into Device Firmware
-      // Upgrade (DFU) mode.
       case gecko_evt_gatt_server_user_write_request_id:
+
+        if (bluetooth_evt->data.evt_gatt_server_user_write_request.characteristic == gattdb_gpd_commissioning) {
+         //Enables the GPD commissioning process
+         OSFlagPost(&proprietary_event_flags,
+                (OS_FLAGS)COMMISSIONING_FLAG,
+                OS_OPT_POST_FLAG_SET,
+                &osErr);
+         APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
+          // Send response to Write Request.
+          pRspWrRsp = gecko_cmd_gatt_server_send_user_write_response(
+            bluetooth_evt->data.evt_gatt_server_user_write_request.connection,
+            gattdb_gpd_commissioning,
+            bg_err_success);
+          APP_ASSERT_DBG((pRspWrRsp->result == bg_err_success), pRspWrRsp->result);
+          // Close connection to enter to DFU OTA mode.
+          pRspConnCl = gecko_cmd_le_connection_close(bluetooth_evt->data.evt_gatt_server_user_write_request.connection);
+          APP_ASSERT_DBG((pRspConnCl->result == bg_err_success), pRspConnCl->result);
+        }
+        break;
+
+        // Events related to OTA upgrading
+        // Check if the user-type OTA Control Characteristic was written.
+        // If ota_control was written, boot the device into Device Firmware
+        // Upgrade (DFU) mode.
         if (bluetooth_evt->data.evt_gatt_server_user_write_request.characteristic == gattdb_ota_control) {
           // Set flag to enter to OTA mode.
           boot_to_dfu = 1;
