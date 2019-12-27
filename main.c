@@ -184,23 +184,6 @@ static const gecko_configuration_t bluetooth_config =
 };
 static uint8_t boot_to_dfu = 0;
 
-// Proprietary radio
-static RAIL_Handle_t railHandle = NULL;
-static RAILSched_Config_t railSchedState;
-static void radioEventHandler(RAIL_Handle_t railHandle,
-                              RAIL_Events_t events);
-static RAIL_Config_t railCfg = {
-  .eventsCallback = &radioEventHandler,
-  .protocol = NULL,
-  .scheduler = &railSchedState,
-};
-
-/* OS Event Flag Group */
-OS_FLAG_GRP  proprietary_event_flags;
-/* Dummy flag to prevent cyclic execution of the proprietary task function code.
- * this flag will not be posted by default. */
-#define DUMMY_FLAG  ((OS_FLAGS)0x01)
-
 /**************************************************************************//**
  * Main.
  *
