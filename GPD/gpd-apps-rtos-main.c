@@ -51,6 +51,11 @@ void greenPowerAppTask(void *p_arg)
   //Initialise the Gpd
   EmberGpd_t * gpdContext = emberGpdInit();
 
+  OSFlagPost(&proprietary_event_flags,
+                  (OS_FLAGS)COMMISSIONING_FLAG,
+                  OS_OPT_POST_FLAG_SET,
+                  &err);
+
     //TODO write the loop for commissioning
     // That disappears in ope mode
   while (DEF_TRUE) {

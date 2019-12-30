@@ -196,6 +196,8 @@ static void sendSuccess(EmberGpd_t * gpd)
                   command,
                   sizeof(command),
                   EMBER_AF_PLUGIN_APPS_CMD_RESEND_NUMBER);
+
+  emberGpdSetState(EMBER_GPD_APP_STATE_OPERATIONAL);
 }
 
 // Sends out a Channel Request, with channel toggleing behaviour payload as configured
