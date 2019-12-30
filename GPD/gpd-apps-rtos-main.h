@@ -34,4 +34,8 @@ OS_FLAG_GRP  proprietary_event_flags;
 #define GREEN_POWER_PSSTORE_TAG_KEY         0x4050
 #define GREEN_POWER_PSSTORE_CONTEXT_KEY     0x4051
 
+
+#define GREEN_POWER_TASK_TIMEOUT_MS         250u
+#define GREEN_POWER_TASK_TIMEOUT_TICKS      ((uint32_t)((GREEN_POWER_TASK_TIMEOUT_MS/1000)*OSTimeTickRateHzGet(NULL)))
+
 #endif

@@ -182,7 +182,7 @@ bool emberGpdLeTimerRunning(void)
 
 void emberGpdLeTimerInit(void)
 {
-#if defined EFR32_SERIES1_CONFIG2_MICRO
+#if defined _SILICON_LABS_32B_SERIES_1_CONFIG_2
   CMU_ClockSelectSet(cmuClock_LFA, cmuSelect_LFRCO);
   CMU_ClockEnable(cmuClock_CORELE, true); /* Enable CORELE clock */
   CMU_ClockEnable(cmuClock_LETIMER0, true);
@@ -219,26 +219,14 @@ void emberGpdAfPluginSleepCallback(void)
 {
   // If Enters EM0 instead or awaken by other things, made to wait by following
   // code until the LE Timer expires to provide the exact rxOffset before receive.
+  
+  //TODO we remove it as this is implemented by the BLE stack
+#ifndef MICRIUM_RTOS
   EMU_EnterEM2(true);
+#endif
 }
 // ----------------------------------------------------------------------------
 // ----------- END : Bidirectional timing with LE timer -----------------------
-// ----------------------------------------------------------------------------
-
-// ----------------------------------------------------------------------------
-// ------------Sending an operational command ---------------------------------
-// ----------------------------------------------------------------------------
-static void sendToggle(EmberGpd_t * gpd)
-{
-  uint8_t command[] = { GP_CMD_TOGGLE };
-  emberAfGpdfSend(EMBER_GPD_NWK_FC_FRAME_TYPE_DATA,
-                  gpd,
-                  command,
-                  sizeof(command),
-                  EMBER_AF_PLUGIN_APPS_CMD_RESEND_NUMBER);
-}
-// ----------------------------------------------------------------------------
-// ------------ END : Sending an operational command --------------------------
 // ----------------------------------------------------------------------------
 
 // ----------------------------------------------------------------------------
@@ -250,34 +238,6 @@ static void sendToggle(EmberGpd_t * gpd)
  */
 void emberGpdAfPluginMainCallback(EmberGpd_t * gpd)
 {
-
-switch (gpd->gpdState)
-{
-    case EMBER_GPD_APP_STATE_NOT_COMMISSIONED :
-    case EMBER_GPD_APP_STATE_CHANNEL_REQUEST :
-    case EMBER_GPD_APP_STATE_CHANNEL_RECEIVED :
-    case EMBER_GPD_APP_STATE_COMMISSIONING_REQUEST :
-    case EMBER_GPD_APP_STATE_COMMISSIONING_REPLY_RECIEVED :
-    case EMBER_GPD_APP_STATE_COMMISSIONING_SUCCESS_REQUEST :
-        emberGpdAfPluginCommission(gpd);
-        emberGpdStoreSecDataToNV(gpd);
-        break;
-
-    case EMBER_GPD_APP_STATE_OPERATIONAL :
-    case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_REQUEST :
-    case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_RECEIVED :
-        sendToggle(gpd);
-        emberGpdStoreSecDataToNV(gpd);
-        break;
-
-    case EMBER_GPD_APP_STATE_INVALID :
-        emberGpdAfPluginDeCommission(gpd);
-        break;
-
-    default:
-        //Wait for next external event
-        break;
-}
 
 }
 // ----------------------------------------------------------------------------
