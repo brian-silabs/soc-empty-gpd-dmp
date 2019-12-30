@@ -34,8 +34,9 @@ OS_FLAG_GRP  proprietary_event_flags;
 #define GREEN_POWER_PSSTORE_TAG_KEY         0x4050
 #define GREEN_POWER_PSSTORE_CONTEXT_KEY     0x4051
 
+#define OS_TICK_RATE_HZ 					1024u //Check rtos_bluettoth.c - I have no idea where this is set since we are using dyn tick & sleeptimer
 
 #define GREEN_POWER_TASK_TIMEOUT_MS         250u
-#define GREEN_POWER_TASK_TIMEOUT_TICKS      ((uint32_t)((GREEN_POWER_TASK_TIMEOUT_MS/1000)*OSTimeTickRateHzGet(NULL)))
+#define GREEN_POWER_TASK_TIMEOUT_TICKS      ((uint32_t)((GREEN_POWER_TASK_TIMEOUT_MS/1000u)*OS_TICK_RATE_HZ))
 
 #endif

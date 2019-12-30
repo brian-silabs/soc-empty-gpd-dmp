@@ -28,7 +28,7 @@ void greenPowerAppTask(void *p_arg)
   PP_UNUSED_PARAM(p_arg);
   RTOS_ERR err;
 
-  OS_TICK taskTimeoutTicks = 0;
+  volatile OS_TICK taskTimeoutTicks = 0;
 
   OSFlagPend(&proprietary_event_flags,
                INIT_FLAG,
@@ -77,7 +77,7 @@ void greenPowerAppTask(void *p_arg)
         case EMBER_GPD_APP_STATE_COMMISSIONING_SUCCESS_REQUEST :
             emberGpdAfPluginCommission(gpdContext);
             emberGpdStoreSecDataToNV(gpdContext);
-            taskTimeoutTicks = GREEN_POWER_TASK_TIMEOUT_TICKS;
+            taskTimeoutTicks = 250;
             break;
 
         case EMBER_GPD_APP_STATE_OPERATIONAL :
