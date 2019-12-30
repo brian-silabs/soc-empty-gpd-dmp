@@ -238,7 +238,7 @@ void emberGpdAfPluginSleepCallback(void)
  */
 void emberGpdAfPluginMainCallback(EmberGpd_t * gpd)
 {
-
+ //Moved to gpd-apps-rtos-main.c
 }
 // ----------------------------------------------------------------------------
 // ------------ END : Application main loop -----------------------------------
