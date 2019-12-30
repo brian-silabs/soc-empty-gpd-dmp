@@ -75,8 +75,8 @@ void greenPowerAppTask(void *p_arg)
         case EMBER_GPD_APP_STATE_COMMISSIONING_REQUEST :
         case EMBER_GPD_APP_STATE_COMMISSIONING_REPLY_RECIEVED :
         case EMBER_GPD_APP_STATE_COMMISSIONING_SUCCESS_REQUEST :
-            emberGpdAfPluginCommission(gpd);
-            emberGpdStoreSecDataToNV(gpd);
+            emberGpdAfPluginCommission(gpdContext);
+            emberGpdStoreSecDataToNV(gpdContext);
             taskTimeoutTicks = GREEN_POWER_TASK_TIMEOUT_TICKS;
             break;
 
@@ -84,22 +84,21 @@ void greenPowerAppTask(void *p_arg)
         case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_REQUEST :
         case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_RECEIVED :
             taskTimeoutTicks = 0;
-            sendToggle(gpd);
-            emberGpdStoreSecDataToNV(gpd);
+            sendToggle(gpdContext);
+            emberGpdStoreSecDataToNV(gpdContext);
             break;
 
         case EMBER_GPD_APP_STATE_INVALID :
-            emberGpdAfPluginDeCommission(gpd);
+            emberGpdAfPluginDeCommission(gpdContext);
             break;
 
         default:
             //Wait for next external event
             break;
     }
-    
-    //emberGpdAfPluginMainCallback(gpdContext);
 
-    APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(err) == RTOS_ERR_NONE), 1);
+    //TODO handle flag post timeout "error" here too
+    //APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(err) == RTOS_ERR_NONE), 1);
 
   }
 }
