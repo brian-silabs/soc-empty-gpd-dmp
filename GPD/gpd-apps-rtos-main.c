@@ -12,8 +12,11 @@
 #include "gpd-components-common.h"
 #include "gpd-callbacks.h"
 
-static void sendToggle(EmberGpd_t * gpd);
+#include "em_prs.h"
+#include "em_gpio.h"
 
+static void sendToggle(EmberGpd_t * gpd);
+void debug_init(void);
 /**************************************************************************//**
  * Proprietary Application task.
  *
@@ -39,8 +42,11 @@ void greenPowerAppTask(void *p_arg)
                NULL,
                &err);
 
+  CMU_ClockEnable(cmuClock_GPIO, true);
+  GPIO_PinModeSet(gpioPortF, 5, gpioModePushPull, 0);
+
   // Initialise NV
-  emberGpdNvInit();//TODO as we are relying on the BLE stack NVM, need to make sure it was init first
+  emberGpdNvInit();//TODO as we are relying on the BL.E stack NVM, need to make sure it was init first
 
   // Initialise timer for rxOffset timing during rxAfterTx
   emberGpdLeTimerInit();
@@ -50,6 +56,8 @@ void greenPowerAppTask(void *p_arg)
 
   //Initialise the Gpd
   EmberGpd_t * gpdContext = emberGpdInit();
+
+  debug_init();
 
   OSFlagPost(&proprietary_event_flags,
                   (OS_FLAGS)COMMISSIONING_FLAG,
@@ -78,11 +86,11 @@ void greenPowerAppTask(void *p_arg)
         case EMBER_GPD_APP_STATE_CHANNEL_REQUEST :
         case EMBER_GPD_APP_STATE_CHANNEL_RECEIVED :
         case EMBER_GPD_APP_STATE_COMMISSIONING_REQUEST :
-        case EMBER_GPD_APP_STATE_COMMISSIONING_REPLY_RECIEVED :
+    	case EMBER_GPD_APP_STATE_COMMISSIONING_REPLY_RECIEVED :
         case EMBER_GPD_APP_STATE_COMMISSIONING_SUCCESS_REQUEST :
             emberGpdAfPluginCommission(gpdContext);
             emberGpdStoreSecDataToNV(gpdContext);
-            taskTimeoutTicks = 250;
+            taskTimeoutTicks = 900;
             break;
 
         case EMBER_GPD_APP_STATE_OPERATIONAL :
@@ -117,3 +125,28 @@ static void sendToggle(EmberGpd_t * gpd)
                   sizeof(command),
                   EMBER_AF_PLUGIN_APPS_CMD_RESEND_NUMBER);
 }
+
+void debug_init(void)
+{
+  // Turn on the PRS and GPIO clocks so we can access their registers
+  CMU_ClockEnable(cmuClock_PRS, true);
+  CMU_ClockEnable(cmuClock_GPIO, true);
+
+  GPIO_PinModeSet(gpioPortC, 10, gpioModePushPull, 0);
+  GPIO_PinModeSet(gpioPortC, 11, gpioModePushPull, 0);
+
+  PRS_SourceSignalSet(9, PRS_RAC_RX & 0xFF00,
+                          ((PRS_RAC_RX & _PRS_CH_CTRL_SIGSEL_MASK) >> _PRS_CH_CTRL_SIGSEL_SHIFT),
+                                prsEdgeOff);
+  PRS_SourceSignalSet(10,
+                      (PRS_RAC_TX & 0xFF00),
+                      ((PRS_RAC_TX & _PRS_CH_CTRL_SIGSEL_MASK) >> _PRS_CH_CTRL_SIGSEL_SHIFT),
+                      prsEdgeOff);
+
+  PRS->ROUTELOC2 &= ~_PRS_ROUTELOC2_CH9LOC_MASK;
+  PRS->ROUTELOC2 |= PRS_ROUTELOC2_CH9LOC_LOC15;
+  PRS->ROUTELOC2 &= ~_PRS_ROUTELOC2_CH10LOC_MASK;
+  PRS->ROUTELOC2 |= PRS_ROUTELOC2_CH10LOC_LOC5;
+  PRS->ROUTEPEN |= (PRS_ROUTEPEN_CH9PEN | PRS_ROUTEPEN_CH10PEN);
+}
+
