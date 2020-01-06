@@ -128,7 +128,7 @@ void emberGpdRadioInit(void)
     while (true) ;
   }
 
-#ifdef DMP_GPD // TODO
+#ifndef MICRIUM_RTOS
   //In multiprotocol, RAIL currently shares one receive FIFO across all protocols. This function will return RAIL_STATUS_INVALID_STATE if the requested RAIL_Handle_t is not active.
   // Set RX FIFO, and verify that the size is correct
   RAIL_Status_t status = RAIL_SetRxFifo(railHandle, railRxFifo, &fifoSize);

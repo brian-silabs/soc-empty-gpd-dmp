@@ -469,9 +469,9 @@ int8_t emberGpdProcessCommissioningReply(EmberGpd_t * gpd,
       rxSecCounter = &pRxbuffer[index];
       index += sizeof(uint32_t);
 
-      //TODO done within the ISR context, does not work when using mbedtls in DMP app
       // Unsecured the key
 #ifndef MICRIUM_RTOS
+      //Crypto call one within the ISR context, does not work when using mbedtls in DMP app (Threading-Alt uses mutexes)
       emberGpdAfPluginDecryptReceivedKey(EmberGpd_t * gpd, uint8_t * newKeyEncrypted, uint8_t * newKeyMic, uint8_t * rxSecCounter);
       if (SUCCESS != emberGpdSecurityDecryptKey(&(gpd->addr),
                                                 newKeyEncrypted,

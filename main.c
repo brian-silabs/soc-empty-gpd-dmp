@@ -379,13 +379,13 @@ static void bluetoothAppTask(void *p_arg)
         // The next two parameters are minimum and maximum advertising
         // interval, both in units of (milliseconds * 1.6).
         // The last two parameters are duration and maxevents left as default.
-//        pRspAdvT = gecko_cmd_le_gap_set_advertise_timing(0, 160, 160, 0, 0);
-//        APP_ASSERT_DBG((pRspAdvT->result == bg_err_success), pRspAdvT->result);
-//        // Start general advertising and enable connections.
-//        pRspAdv = gecko_cmd_le_gap_start_advertising(0,
-//                                                     le_gap_general_discoverable,
-//                                                     le_gap_connectable_scannable);
-//        APP_ASSERT_DBG((pRspAdv->result == bg_err_success), pRspAdv->result);
+        pRspAdvT = gecko_cmd_le_gap_set_advertise_timing(0, 160, 160, 0, 0);
+        APP_ASSERT_DBG((pRspAdvT->result == bg_err_success), pRspAdvT->result);
+        // Start general advertising and enable connections.
+        pRspAdv = gecko_cmd_le_gap_start_advertising(0,
+                                                     le_gap_general_discoverable,
+                                                     le_gap_connectable_scannable);
+        APP_ASSERT_DBG((pRspAdv->result == bg_err_success), pRspAdv->result);
         break;
 
       case gecko_evt_le_connection_closed_id:
@@ -393,12 +393,6 @@ static void bluetoothAppTask(void *p_arg)
         if (boot_to_dfu) {
           // Enter to DFU OTA mode.
           gecko_cmd_system_reset(2);
-        } else {
-          // Restart advertising after client has disconnected.
-          pRspAdv = gecko_cmd_le_gap_start_advertising(0,
-                                                       le_gap_general_discoverable,
-                                                       le_gap_connectable_scannable);
-          APP_ASSERT_DBG((pRspAdv->result == bg_err_success), pRspAdv->result);
         }
         break;
 
@@ -422,8 +416,7 @@ static void bluetoothAppTask(void *p_arg)
           // Close connection to enter to GPD Commissioning.
           pRspConnCl = gecko_cmd_le_connection_close(bluetooth_evt->data.evt_gatt_server_user_write_request.connection);
           APP_ASSERT_DBG((pRspConnCl->result == bg_err_success), pRspConnCl->result);
-          //Stop advertising for the same reason
-          gecko_cmd_le_gap_stop_advertising(0);
+
         }
         break;
 

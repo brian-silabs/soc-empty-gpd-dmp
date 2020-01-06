@@ -22,6 +22,8 @@
 #include <stdint.h>
 #include "em_device.h"
 
+#include "sl_malloc.h"
+
 // bg_calloc and bg_free are implemented in bgcommon
 void bg_free(void *pv);
 void *bg_calloc(size_t num, size_t size);

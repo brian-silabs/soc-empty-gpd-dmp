@@ -46,7 +46,7 @@ void greenPowerAppTask(void *p_arg)
   GPIO_PinModeSet(gpioPortF, 5, gpioModePushPull, 0);
 
   // Initialise NV
-  emberGpdNvInit();//TODO as we are relying on the BL.E stack NVM, need to make sure it was init first
+  emberGpdNvInit();//TODO as we are relying on the BLE stack NVM, need to make sure it was init first
 
   // Initialise timer for rxOffset timing during rxAfterTx
   emberGpdLeTimerInit();
@@ -58,11 +58,6 @@ void greenPowerAppTask(void *p_arg)
   EmberGpd_t * gpdContext = emberGpdInit();
 
   debug_init();
-
-  OSFlagPost(&proprietary_event_flags,
-                  (OS_FLAGS)COMMISSIONING_FLAG,
-                  OS_OPT_POST_FLAG_SET,
-                  &err);
 
     //TODO write the loop for commissioning
     // That disappears in ope mode
