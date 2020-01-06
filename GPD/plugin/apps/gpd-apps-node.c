@@ -56,6 +56,7 @@ void emberGpdLoadGpdDefaultConfiguration(EmberGpd_t * gpd)
   gpd->securityLevel = EMBER_AF_PLUGIN_APPS_SECURITY_LEVEL;
 
   gpd->gpdState = EMBER_GPD_APP_STATE_NOT_COMMISSIONED;
+  //gpd->currentCommReq = 0; // Default state , no need to initialise
   //gpd->securityFrameCounter = 0; // Default FC , no need to initialise
 }
 

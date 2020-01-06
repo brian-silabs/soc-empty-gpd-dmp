@@ -300,6 +300,7 @@ typedef struct {
   uint8_t rxAfterTx;
   uint8_t rxOffset;
   uint8_t minRxWindow;
+  uint8_t currentCommReq;
   EmberGpdSecurityLevel_t securityLevel;
   EmberGpdSecurityKeyType_t securityKeyType;
   uint8_t securityKey[16];

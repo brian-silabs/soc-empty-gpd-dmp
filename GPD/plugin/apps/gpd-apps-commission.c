@@ -399,11 +399,14 @@ static void gpdBidirCommissioningStateMachine(EmberGpd_t * gpd)
 #if (defined EMBER_AF_PLUGIN_APPS_GPD_APP_DESCRIPTION_FOLLOWS)
   gpdCommissioningStateMachineWithAppDescription(gpd);
 #else
-  for (int i = 0; i < EMBER_AF_PLUGIN_APPS_GPD_APP_NUMBER_OF_COMMISSIONING_REQUEST; i++) {
+  while(gpd->currentCommReq < EMBER_AF_PLUGIN_APPS_GPD_APP_NUMBER_OF_COMMISSIONING_REQUEST) {
     if (gpd->gpdState == EMBER_GPD_APP_STATE_COMMISSIONING_REPLY_RECIEVED) {
+      gpd->currentCommReq = 0;
       return;
     }
     sendCommissioningRequest(gpd);
+    gpd->currentCommReq++;
+    return;
   }
   gpd->gpdState = EMBER_GPD_APP_STATE_NOT_COMMISSIONED;
 #endif
