@@ -93,6 +93,14 @@ void greenPowerAppTask(void *p_arg)
             taskTimeoutTicks = 900;
             break;
 
+#ifdef MICRIUM_RTOS
+        case EMBER_GPD_APP_STATE_COMMISSIONING_REPLY_RECIEVED_DECRYPT_KEY:
+        	emberGpdAfPluginDecryptReceivedKey(gpdContext);
+        	emberGpdStoreSecDataToNV(gpdContext);
+        	taskTimeoutTicks = 900;
+        	break;
+#endif
+
         case EMBER_GPD_APP_STATE_OPERATIONAL :
         case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_REQUEST :
         case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_RECEIVED :
