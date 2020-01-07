@@ -4,6 +4,9 @@
 This projects aims to be a simple demonstrator of Silabs GPD implementation over Micrium OS, aside Silabs BLE Stack
 I tried to use the majority of the existing code to avoid any trouble in importing the future GPD stacks 
 
+Toolchain - GCC 7.2.1
+Gecko SDK Suite 2.7.0
+
 ## What has been done
   1. Used soc-empty-rail-dmp as reference
   2. Replaced the BLE project's libmbedtls by the library itself
@@ -33,6 +36,8 @@ Ideally, radio scheduler priorities need to be handled so that both protocols ca
 ## Notes
 NB: GPD Channel for RX during 1st commissioning phase is always 11 (channel configuration channel)
 NB: Main loop has to be periodically called so the device behavior works (Approx 1 sec between each)
+NB: Any change to the .ISC will re-integrate the libmbedtls.a to the .cproject file
+    Make sure that you remove it before compilation or you will get duplicate definitions
 
 ## Fixed issues :
 1. An issue where Commissioning Requests are sent right after each other

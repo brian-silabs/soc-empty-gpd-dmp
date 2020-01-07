@@ -41,7 +41,14 @@ static void RAILCb_Generic(RAIL_Handle_t railHandle, RAIL_Events_t events)
     uint16_t rxReceived = RAIL_ReadRxFifo(railHandle, emberGpdGetRxMpdu(), bytesAvailable);
     emberGpdIncomingMessageHandler(emberGpdGetRxMpdu(), rxReceived);
     CORE_ExitCritical(c);
+    RAIL_YieldRadio(railHandle);
+  } else if (events & (RAIL_EVENT_TX_PACKET_SENT
+						  | RAIL_EVENT_TX_ABORTED
+						  | RAIL_EVENT_TX_UNDERFLOW
+						  | RAIL_EVENT_SCHEDULER_STATUS)) {
+	RAIL_YieldRadio(railHandle);
   }
+
 }
 
 static void RAIL_CbRfReady(RAIL_Handle_t railHandle)

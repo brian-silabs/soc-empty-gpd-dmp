@@ -66,6 +66,7 @@
 
 #include "mbedtls/threading.h"
 
+//This file includes shared code between BLE and GP
 #include "gpd-apps-rtos-main.h"
 
 // Ex Main Start task
@@ -368,11 +369,8 @@ static void bluetoothAppTask(void *p_arg)
       // procedure.
       case gecko_evt_system_boot_id:
          //Enable the GPD stack
-         OSFlagPost(&proprietary_event_flags,
-                (OS_FLAGS)INIT_FLAG,
-                OS_OPT_POST_FLAG_SET,
-                &osErr);
-         APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
+         GPD_Init();
+         //APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
 
         // Set advertising parameters. 100ms advertisement interval.
         // The first parameter is advertising set handle
@@ -400,11 +398,8 @@ static void bluetoothAppTask(void *p_arg)
 
         if (bluetooth_evt->data.evt_gatt_server_user_write_request.characteristic == gattdb_gpd_commissioning) {
          //Enables the GPD commissioning process
-         OSFlagPost(&proprietary_event_flags,
-                (OS_FLAGS)COMMISSIONING_FLAG,
-                OS_OPT_POST_FLAG_SET,
-                &osErr);
-         APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
+         GPD_StartCommissioning();
+         //APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
           // Send response to Write Request.
           pRspWrRsp = gecko_cmd_gatt_server_send_user_write_response(
             bluetooth_evt->data.evt_gatt_server_user_write_request.connection,
@@ -417,6 +412,19 @@ static void bluetoothAppTask(void *p_arg)
           pRspConnCl = gecko_cmd_le_connection_close(bluetooth_evt->data.evt_gatt_server_user_write_request.connection);
           APP_ASSERT_DBG((pRspConnCl->result == bg_err_success), pRspConnCl->result);
 
+        }
+        break;
+
+        if (bluetooth_evt->data.evt_gatt_server_user_write_request.characteristic == gattdb_gpd_toggle) {
+         //Enables the GPD commissioning process
+         GPD_Toggle();
+         //APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
+          // Send response to Write Request.
+          // pRspWrRsp = gecko_cmd_gatt_server_send_user_write_response(
+          //   bluetooth_evt->data.evt_gatt_server_user_write_request.connection,
+          //   gattdb_gpd_toggle,
+          //   bg_err_success);
+          // APP_ASSERT_DBG((pRspWrRsp->result == bg_err_success), pRspWrRsp->result);
         }
         break;
 
@@ -437,6 +445,26 @@ static void bluetoothAppTask(void *p_arg)
           pRspConnCl = gecko_cmd_le_connection_close(bluetooth_evt->data.evt_gatt_server_user_write_request.connection);
           APP_ASSERT_DBG((pRspConnCl->result == bg_err_success), pRspConnCl->result);
         }
+        break;
+
+      case gecko_evt_system_external_signal_id:
+        if(bluetooth_evt->data.evt_system_external_signal.extsignals == GPD_INIT_OVER)
+        {
+
+        } else if (bluetooth_evt->data.evt_system_external_signal.extsignals == GPD_COMMISSIONING_OVER)
+        {
+          pRspAdv = gecko_cmd_le_gap_start_advertising( 0,
+                                                        le_gap_general_discoverable,
+                                                        le_gap_connectable_scannable);
+          APP_ASSERT_DBG((pRspAdv->result == bg_err_success), pRspAdv->result);
+        } else if (bluetooth_evt->data.evt_system_external_signal.extsignals == GPD_DECOMMISSIONING_OVER)
+        {
+
+        } else 
+        {
+
+        }
+
         break;
 
       default:

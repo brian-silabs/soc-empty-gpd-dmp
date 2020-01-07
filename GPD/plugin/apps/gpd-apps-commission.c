@@ -546,8 +546,8 @@ void emberGpdAfPluginCommission(EmberGpd_t * gpd)
   } else if (gpd->gpdState == EMBER_GPD_APP_STATE_CHANNEL_RECEIVED) {
     gpdBidirCommissioningStateMachine(gpd);
   } else if (gpd->gpdState == EMBER_GPD_APP_STATE_COMMISSIONING_REPLY_RECIEVED) {
+    emberGpdSetState(EMBER_GPD_APP_STATE_COMMISSIONING_SUCCESS_REQUEST);
     sendSuccess(gpd);
-    emberGpdSetState(EMBER_GPD_APP_STATE_OPERATIONAL);
   }
 #else
   sendUndirCommissioningRequest(gpd);

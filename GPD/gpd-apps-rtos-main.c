@@ -12,11 +12,52 @@
 #include "gpd-components-common.h"
 #include "gpd-callbacks.h"
 
+#include "rtos_gecko.h"
+
+#ifdef DEBUG_RADIO
 #include "em_prs.h"
 #include "em_gpio.h"
+#endif
+
+///////////////////////////////////////////////////////////////////////////////
+////////////////////////////// RTOS related ///////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+/* Dummy flag to prevent cyclic execution of the proprietary task function code.
+ * this flag will not be posted by default. */
+#define INIT_FLAG               ((OS_FLAGS)0x01)
+#define COMMISSIONING_FLAG      ((OS_FLAGS)0x02)
+#define DECOMMISSIONING_FLAG    ((OS_FLAGS)0x04)
+#define OPERATE_FLAG            ((OS_FLAGS)0x08)
+
+///////////////////////////////////////////////////////////////////////////////
+/////////////////////////////// NVM related ///////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+#define GREEN_POWER_PSSTORE_BASE            0x4050
+#define GREEN_POWER_PSSTORE_TAG_KEY         0x4050
+#define GREEN_POWER_PSSTORE_CONTEXT_KEY     0x4051
+
+///////////////////////////////////////////////////////////////////////////////
+/////////////////////////////// NVM related ///////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+#define OS_TICK_RATE_HZ 					1024u //Check rtos_bluetooth.c - I have no idea where this is set since we are using dyn tick & sleeptimer
+
+#define GREEN_POWER_TASK_TIMEOUT_MS         250u
+#define GREEN_POWER_TASK_TIMEOUT_TICKS      ((uint32_t)((GREEN_POWER_TASK_TIMEOUT_MS/1000u)*OS_TICK_RATE_HZ))
+
+static uint8_t gpd_Command(OS_FLAGS flags);
+static void gpd_SignalEvent(gpdEvent_t event);
 
 static void sendToggle(EmberGpd_t * gpd);
-void debug_init(void);
+
+#ifdef DEBUG_RADIO
+static void debug_init(void);
+#endif
+
+static EmberGpd_t * gpdContext;
+
 /**************************************************************************//**
  * Proprietary Application task.
  *
@@ -42,9 +83,6 @@ void greenPowerAppTask(void *p_arg)
                NULL,
                &err);
 
-  CMU_ClockEnable(cmuClock_GPIO, true);
-  GPIO_PinModeSet(gpioPortF, 5, gpioModePushPull, 0);
-
   // Initialise NV
   emberGpdNvInit();//TODO as we are relying on the BLE stack NVM, need to make sure it was init first
 
@@ -55,12 +93,12 @@ void greenPowerAppTask(void *p_arg)
   emberGpdRadioInit();
 
   //Initialise the Gpd
-  EmberGpd_t * gpdContext = emberGpdInit();
+  gpdContext = emberGpdInit();
 
+#ifdef DEBUG_RADIO
   debug_init();
-
-    //TODO write the loop for commissioning
-    // That disappears in ope mode
+#endif 
+  gpd_SignalEvent(GPD_INIT_OVER);
   while (DEF_TRUE) {
     // Wait for the dummy flag. Use this flag to stop waiting with the execution of your code.
     // Call user to implement rest of the thing
@@ -82,11 +120,14 @@ void greenPowerAppTask(void *p_arg)
         case EMBER_GPD_APP_STATE_CHANNEL_RECEIVED :
         case EMBER_GPD_APP_STATE_COMMISSIONING_REQUEST :
     	case EMBER_GPD_APP_STATE_COMMISSIONING_REPLY_RECIEVED :
-        case EMBER_GPD_APP_STATE_COMMISSIONING_SUCCESS_REQUEST :
             emberGpdAfPluginCommission(gpdContext);
             emberGpdStoreSecDataToNV(gpdContext);
             taskTimeoutTicks = 900;
             break;
+    	case EMBER_GPD_APP_STATE_COMMISSIONING_SUCCESS_REQUEST :
+    		emberGpdSetState(EMBER_GPD_APP_STATE_OPERATIONAL);
+    		gpd_SignalEvent(GPD_COMMISSIONING_OVER);
+    		break;
 
 #ifdef MICRIUM_RTOS
         case EMBER_GPD_APP_STATE_COMMISSIONING_REPLY_RECIEVED_DECRYPT_KEY:
@@ -119,6 +160,77 @@ void greenPowerAppTask(void *p_arg)
   }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+/////////////////////////// Public API definition /////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+int8_t GPD_Init(void)
+{
+  int8_t error = 0;
+  error = gpd_Command(INIT_FLAG);
+  return error;
+}
+
+uint8_t GPD_GetGpdState(void)
+{
+	return (uint8_t)(gpdContext->gpdState);
+}
+
+int8_t GPD_StartCommissioning(void)
+{
+  int8_t error = 0;
+  if(gpdContext->gpdState != EMBER_GPD_APP_STATE_NOT_COMMISSIONED)
+  {
+    //Error device already in commissioning process
+    error = (-1);
+  } else {
+    error = gpd_Command(COMMISSIONING_FLAG);
+  }
+  
+  return error;
+}
+
+//Can be called anytime, and be used as a reset in case of bad state
+int8_t GPD_DeCommission(void)
+{
+  int8_t error = 0;
+  error = gpd_Command(DECOMMISSIONING_FLAG);
+  return error;
+}
+
+int8_t GPD_Toggle(void)
+{
+  int8_t error = 0;
+  error = gpd_Command(OPERATE_FLAG);
+  return error;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/////////////////////////// Private API definition /////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static uint8_t gpd_Command(OS_FLAGS flags)
+{
+	RTOS_ERR osErr;
+  //Enables the GPD commissioning process
+  OSFlagPost(&proprietary_event_flags,
+        (OS_FLAGS)flags,
+        OS_OPT_POST_FLAG_SET,
+        &osErr);
+
+  return 0;
+}
+
+static void gpd_SignalEvent(gpdEvent_t event)
+{
+  gecko_external_signal(event);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/////////////////////////// Private API definition /////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+
 static void sendToggle(EmberGpd_t * gpd)
 {
   uint8_t command[] = { GP_CMD_TOGGLE };
@@ -129,7 +241,12 @@ static void sendToggle(EmberGpd_t * gpd)
                   EMBER_AF_PLUGIN_APPS_CMD_RESEND_NUMBER);
 }
 
-void debug_init(void)
+///////////////////////////////////////////////////////////////////////////////
+/////////////////////////// Private API definition /////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+#ifdef DEBUG_RADIO
+static void debug_init(void)
 {
   // Turn on the PRS and GPIO clocks so we can access their registers
   CMU_ClockEnable(cmuClock_PRS, true);
@@ -152,4 +269,4 @@ void debug_init(void)
   PRS->ROUTELOC2 |= PRS_ROUTELOC2_CH10LOC_LOC5;
   PRS->ROUTEPEN |= (PRS_ROUTEPEN_CH9PEN | PRS_ROUTEPEN_CH10PEN);
 }
-
+#endif
