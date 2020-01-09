@@ -25,10 +25,10 @@
 
 /* Dummy flag to prevent cyclic execution of the proprietary task function code.
  * this flag will not be posted by default. */
-#define INIT_FLAG               ((OS_FLAGS)0x01)
-#define COMMISSIONING_FLAG      ((OS_FLAGS)0x02)
-#define DECOMMISSIONING_FLAG    ((OS_FLAGS)0x04)
-#define OPERATE_FLAG            ((OS_FLAGS)0x08)
+#define INIT_FLAG                           ((OS_FLAGS)0x01)
+#define COMMISSIONING_FLAG                  ((OS_FLAGS)0x02)
+#define DECOMMISSIONING_FLAG                ((OS_FLAGS)0x04)
+#define OPERATE_FLAG                        ((OS_FLAGS)0x08)
 
 ///////////////////////////////////////////////////////////////////////////////
 /////////////////////////////// NVM related ///////////////////////////////////
@@ -42,15 +42,16 @@
 /////////////////////////////// NVM related ///////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-#define OS_TICK_RATE_HZ 					1024u //Check rtos_bluetooth.c - I have no idea where this is set since we are using dyn tick & sleeptimer
+#define OS_TICK_RATE_HZ 					          1024u //Check rtos_bluetooth.c - I have no idea where this is set since we are using dyn tick & sleeptimer
 
 #define GREEN_POWER_TASK_TIMEOUT_MS         250u
 #define GREEN_POWER_TASK_TIMEOUT_TICKS      ((uint32_t)((GREEN_POWER_TASK_TIMEOUT_MS/1000u)*OS_TICK_RATE_HZ))
 
-static uint8_t gpd_Command(OS_FLAGS flags);
-static void gpd_SignalEvent(gpdEvent_t event);
 
-static void sendToggle(EmberGpd_t * gpd);
+static uint8_t  gpd_Command     (OS_FLAGS flags);
+static void     gpd_SignalEvent (gpdEvent_t event);
+
+static void     sendToggle      (EmberGpd_t * gpd);
 
 #ifdef DEBUG_RADIO
 static void debug_init(void);
@@ -98,7 +99,9 @@ void greenPowerAppTask(void *p_arg)
 #ifdef DEBUG_RADIO
   debug_init();
 #endif 
-  gpd_SignalEvent(GPD_INIT_OVER);
+
+  gpd_SignalEvent(GPD_EVENT_INIT_OVER);
+
   while (DEF_TRUE) {
     // Wait for the dummy flag. Use this flag to stop waiting with the execution of your code.
     // Call user to implement rest of the thing
@@ -116,49 +119,47 @@ void greenPowerAppTask(void *p_arg)
     switch (gpdContext->gpdState)
     {
         case EMBER_GPD_APP_STATE_NOT_COMMISSIONED :
-          taskTimeoutTicks = 0;
-        break;
+          taskTimeoutTicks = 0;//Falling here we wait for ever
+          break;
 
         case EMBER_GPD_APP_STATE_CHANNEL_REQUEST :
         case EMBER_GPD_APP_STATE_CHANNEL_RECEIVED :
         case EMBER_GPD_APP_STATE_COMMISSIONING_REQUEST :
-    	case EMBER_GPD_APP_STATE_COMMISSIONING_REPLY_RECIEVED :
-            emberGpdAfPluginCommission(gpdContext);
-            emberGpdStoreSecDataToNV(gpdContext);
-            taskTimeoutTicks = 900;
-            break;
-    	case EMBER_GPD_APP_STATE_COMMISSIONING_SUCCESS_REQUEST :
-    		emberGpdSetState(EMBER_GPD_APP_STATE_OPERATIONAL);
-    		gpd_SignalEvent(GPD_COMMISSIONING_OVER);
-    		break;
+    	  case EMBER_GPD_APP_STATE_COMMISSIONING_REPLY_RECIEVED :
+          taskTimeoutTicks = 900;
+          emberGpdAfPluginCommission(gpdContext);
+          break;
+    	  case EMBER_GPD_APP_STATE_COMMISSIONING_SUCCESS_REQUEST :
+          emberGpdSetState(EMBER_GPD_APP_STATE_OPERATIONAL);
+          gpd_SignalEvent(GPD_EVENT_COMMISSIONING_OVER);
+          break;
 
 #ifdef MICRIUM_RTOS
         case EMBER_GPD_APP_STATE_COMMISSIONING_REPLY_RECIEVED_DECRYPT_KEY:
-        	emberGpdAfPluginDecryptReceivedKey(gpdContext);
-        	emberGpdStoreSecDataToNV(gpdContext);
         	taskTimeoutTicks = 900;
+          emberGpdAfPluginDecryptReceivedKey(gpdContext);
         	break;
 #endif
 
         case EMBER_GPD_APP_STATE_OPERATIONAL :
+          taskTimeoutTicks = 0;//Falling here we wait for ever
         	break;
         case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_REQUEST :
-        case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_RECEIVED :
-            taskTimeoutTicks = 0;
-            sendToggle(gpdContext);
-            emberGpdSetState(EMBER_GPD_APP_STATE_OPERATIONAL);
-            emberGpdStoreSecDataToNV(gpdContext);
-            break;
+        //case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_RECEIVED :
+          taskTimeoutTicks = 0;
+          sendToggle(gpdContext);
+          emberGpdSetState(EMBER_GPD_APP_STATE_OPERATIONAL);
+          break;
 
         case EMBER_GPD_APP_STATE_INVALID :
-            emberGpdAfPluginDeCommission(gpdContext);
-            break;
+          emberGpdAfPluginDeCommission(gpdContext);
+          break;
 
         default:
-            //Wait for next external event
-            break;
+          //Wait for next external event
+          break;
     }
-
+    emberGpdStoreSecDataToNV(gpdContext);
     //TODO handle flag post timeout "error" here too
     //APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(err) == RTOS_ERR_NONE), 1);
 
@@ -200,8 +201,14 @@ int8_t GPD_StartCommissioning(void)
 int8_t GPD_DeCommission(void)
 {
   int8_t error = 0;
-  emberGpdSetState(EMBER_GPD_APP_STATE_INVALID);
-  error = gpd_Command(DECOMMISSIONING_FLAG);
+  if(gpdContext->gpdState != EMBER_GPD_APP_STATE_OPERATIONAL)
+  {
+    //Error device already in commissioning process or commissioned
+    error = (-1);
+  } else {
+    emberGpdSetState(EMBER_GPD_APP_STATE_INVALID);
+    error = gpd_Command(DECOMMISSIONING_FLAG);
+  }
   return error;
 }
 

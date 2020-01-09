@@ -29,9 +29,9 @@ int8_t GPD_Toggle(void);
 
 
 typedef enum {
-    GPD_INIT_OVER = 0,
-    GPD_COMMISSIONING_OVER,
-    GPD_DECOMMISSIONING_OVER
+    GPD_EVENT_INIT_OVER = 0,
+    GPD_EVENT_COMMISSIONING_OVER,
+    GPD_EVENT_DECOMMISSIONING_OVER
 } gpdEvent_t;
 
 #endif

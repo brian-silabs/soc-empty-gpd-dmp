@@ -156,7 +156,7 @@ const COMMON_INIT_CFG       Common_InitCfg      = COMMON_INIT_CFG_APP;
 const PLATFORM_MGR_INIT_CFG PlatformMgr_InitCfg = PLATFORM_MGR_INIT_CFG_APP;
 
 // Maximum number of Bluetooth connections.
-#define MAX_CONNECTIONS 2
+#define MAX_CONNECTIONS 1
 uint8_t bluetooth_stack_heap[DEFAULT_BLUETOOTH_HEAP(MAX_CONNECTIONS)];
 // Configuration parameters (see gecko_configuration.h)
 static const gecko_configuration_t bluetooth_config =
@@ -394,8 +394,11 @@ static void bluetoothAppTask(void *p_arg)
         }
         break;
 
-      case gecko_evt_gatt_server_user_write_request_id:
+      case gecko_evt_le_connection_opened_id:
 
+        break;
+
+      case gecko_evt_gatt_server_user_write_request_id:
         if (bluetooth_evt->data.evt_gatt_server_user_write_request.characteristic == gattdb_gpd_commissioning) {
          //Enables the GPD commissioning process
          GPD_StartCommissioning();
@@ -411,6 +414,18 @@ static void bluetoothAppTask(void *p_arg)
           // Close connection to enter to GPD Commissioning.
           pRspConnCl = gecko_cmd_le_connection_close(bluetooth_evt->data.evt_gatt_server_user_write_request.connection);
           APP_ASSERT_DBG((pRspConnCl->result == bg_err_success), pRspConnCl->result);
+        }
+
+        if (bluetooth_evt->data.evt_gatt_server_user_write_request.characteristic == gattdb_gpd_decommissioning) {
+         //Enables the GPD commissioning process
+         GPD_DeCommission();
+         //APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
+          // Send response to Write Request.
+           pRspWrRsp = gecko_cmd_gatt_server_send_user_write_response(
+             bluetooth_evt->data.evt_gatt_server_user_write_request.connection,
+             gattdb_gpd_decommissioning,
+             bg_err_success);
+           APP_ASSERT_DBG((pRspWrRsp->result == bg_err_success), pRspWrRsp->result);
         }
 
         if (bluetooth_evt->data.evt_gatt_server_user_write_request.characteristic == gattdb_gpd_toggle) {
@@ -445,18 +460,18 @@ static void bluetoothAppTask(void *p_arg)
         break;
 
       case gecko_evt_system_external_signal_id:
-        if(bluetooth_evt->data.evt_system_external_signal.extsignals == GPD_INIT_OVER)
+        if(bluetooth_evt->data.evt_system_external_signal.extsignals == GPD_EVENT_INIT_OVER)
         {
 
         }
-        if (bluetooth_evt->data.evt_system_external_signal.extsignals == GPD_COMMISSIONING_OVER)
+        if (bluetooth_evt->data.evt_system_external_signal.extsignals == GPD_EVENT_COMMISSIONING_OVER)
         {
            pRspAdv = gecko_cmd_le_gap_start_advertising( 0,
                                                          le_gap_general_discoverable,
                                                          le_gap_connectable_scannable);
            APP_ASSERT_DBG((pRspAdv->result == bg_err_success), pRspAdv->result);
         }
-        if (bluetooth_evt->data.evt_system_external_signal.extsignals == GPD_DECOMMISSIONING_OVER)
+        if (bluetooth_evt->data.evt_system_external_signal.extsignals == GPD_EVENT_DECOMMISSIONING_OVER)
         {
 
         }
