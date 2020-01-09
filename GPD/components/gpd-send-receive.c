@@ -99,7 +99,7 @@ int8_t emberAfGpdfSend(uint8_t frameType,
     uint32_t preTxRailTime = RAIL_GetTime();
     //
     emberGpdRailStartTxWrapper(gpd->skipCca, gpd->channel);
-    emberGpdRailIdleWrapper();
+    //emberGpdRailIdleWrapper();
     //
     if (gpd->rxAfterTx) {
       uint32_t txRailDurationUs = RAIL_GetTime() - preTxRailTime;

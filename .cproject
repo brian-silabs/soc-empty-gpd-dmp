@@ -97,6 +97,7 @@
 								</option>
 								<option id="com.silabs.ide.si32.gcc.cdt.managedbuild.tool.gnu.c.compiler.def.symbols.2118227340" name="Defined symbols (-D)" superClass="com.silabs.ide.si32.gcc.cdt.managedbuild.tool.gnu.c.compiler.def.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="__StackLimit=0x20000000"/>
+									<listOptionValue builtIn="false" value="DEBUG_RADIO=1"/>
 									<listOptionValue builtIn="false" value="MICRIUM_RTOS=1"/>
 									<listOptionValue builtIn="false" value="MBEDTLS_MICRIUMOS=1"/>
 									<listOptionValue builtIn="false" value="MBEDTLS_CONFIG_FILE=&quot;config-multiprotocol.h&quot;"/>

@@ -116,6 +116,9 @@ void greenPowerAppTask(void *p_arg)
     switch (gpdContext->gpdState)
     {
         case EMBER_GPD_APP_STATE_NOT_COMMISSIONED :
+          taskTimeoutTicks = 0;
+        break;
+
         case EMBER_GPD_APP_STATE_CHANNEL_REQUEST :
         case EMBER_GPD_APP_STATE_CHANNEL_RECEIVED :
         case EMBER_GPD_APP_STATE_COMMISSIONING_REQUEST :
@@ -140,7 +143,7 @@ void greenPowerAppTask(void *p_arg)
         case EMBER_GPD_APP_STATE_OPERATIONAL :
         case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_REQUEST :
         case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_RECEIVED :
-            taskTimeoutTicks = 0;
+            taskTimeoutTicks = 900;
             sendToggle(gpdContext);
             emberGpdStoreSecDataToNV(gpdContext);
             break;
@@ -181,9 +184,10 @@ int8_t GPD_StartCommissioning(void)
   int8_t error = 0;
   if(gpdContext->gpdState != EMBER_GPD_APP_STATE_NOT_COMMISSIONED)
   {
-    //Error device already in commissioning process
+    //Error device already in commissioning process or commissioned
     error = (-1);
   } else {
+    emberGpdSetState(EMBER_GPD_APP_STATE_CHANNEL_REQUEST);
     error = gpd_Command(COMMISSIONING_FLAG);
   }
   
@@ -194,6 +198,7 @@ int8_t GPD_StartCommissioning(void)
 int8_t GPD_DeCommission(void)
 {
   int8_t error = 0;
+  emberGpdSetState(EMBER_GPD_APP_STATE_INVALID);
   error = gpd_Command(DECOMMISSIONING_FLAG);
   return error;
 }

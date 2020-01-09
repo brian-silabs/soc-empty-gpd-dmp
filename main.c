@@ -453,10 +453,10 @@ static void bluetoothAppTask(void *p_arg)
 
         } else if (bluetooth_evt->data.evt_system_external_signal.extsignals == GPD_COMMISSIONING_OVER)
         {
-          pRspAdv = gecko_cmd_le_gap_start_advertising( 0,
-                                                        le_gap_general_discoverable,
-                                                        le_gap_connectable_scannable);
-          APP_ASSERT_DBG((pRspAdv->result == bg_err_success), pRspAdv->result);
+          // pRspAdv = gecko_cmd_le_gap_start_advertising( 0,
+          //                                               le_gap_general_discoverable,
+          //                                               le_gap_connectable_scannable);
+          // APP_ASSERT_DBG((pRspAdv->result == bg_err_success), pRspAdv->result);
         } else if (bluetooth_evt->data.evt_system_external_signal.extsignals == GPD_DECOMMISSIONING_OVER)
         {
 

@@ -367,7 +367,7 @@ static void gpdCommissioningChannelRequestOnRxChannel(EmberGpd_t * gpd)
                        EMBER_AP_PLUGIN_APPS_APP_NEXT_RX_CHANNEL,
                        EMBER_AP_PLUGIN_APPS_APP_SECOND_NEXT_RX_CHANNEL);
   }
-  gpd->gpdState = EMBER_GPD_APP_STATE_NOT_COMMISSIONED;
+  gpd->gpdState = EMBER_GPD_APP_STATE_CHANNEL_REQUEST;
 }
 
 // Channel Request state machine : mainly two states
@@ -541,7 +541,7 @@ void emberGpdAfPluginDeCommission(EmberGpd_t * gpd)
 void emberGpdAfPluginCommission(EmberGpd_t * gpd)
 {
 #if (defined EMBER_AF_PLUGIN_APPS_BIDIR_CAPABLE) && (EMBER_AF_PLUGIN_APPS_BIDIR_CAPABLE == true)
-  if (gpd->gpdState == EMBER_GPD_APP_STATE_NOT_COMMISSIONED) {
+  if (gpd->gpdState == EMBER_GPD_APP_STATE_CHANNEL_REQUEST) {
     gpdCommissioningChannelRequestStateMachine(gpd);
   } else if (gpd->gpdState == EMBER_GPD_APP_STATE_CHANNEL_RECEIVED) {
     gpdBidirCommissioningStateMachine(gpd);
