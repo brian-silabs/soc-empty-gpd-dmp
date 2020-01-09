@@ -96,7 +96,9 @@ bool emberGpdAfPluginNvSaveAndLoadCallback(EmberGpd_t * gpd,
                                            uint8_t sizeOfNvmData,
                                            EmebrGpdNvLoadStore_t loadStore)
 {
-	uint8_t * resp;
+	struct gecko_msg_flash_ps_save_rsp_t *pSaveResp;
+	struct gecko_msg_flash_ps_load_rsp_t *pLoadResp;
+	struct gecko_msg_flash_ps_erase_rsp_t *pEraseResp;
 
   if(sizeOfNvmData > 56)
     {
@@ -150,7 +152,36 @@ bool emberGpdAfPluginNvSaveAndLoadCallback(EmberGpd_t * gpd,
   #endif
 
 #ifdef MICRIUM_RTOS
-resp = gecko_cmd_flash_ps_load(GREEN_POWER_PSSTORE_CONTEXT_KEY)->value.data;
+    pLoadResp = gecko_cmd_flash_ps_load(GREEN_POWER_PSSTORE_CONTEXT_KEY);
+    if (0 == pLoadResp->result){
+    	// sanity check: length of data stored in PS key must match the expected value
+		if(sizeOfNvmData != pLoadResp->value.len)
+		{
+			while(1);
+		}
+		memcpy(nvmData, pLoadResp->value.data, pLoadResp->value.len);
+    } else if(pLoadResp->result == 0x502)
+    {
+        // Fresh chip , erase, create a storage with default setting.
+    	pEraseResp = gecko_cmd_flash_ps_erase(GREEN_POWER_PSSTORE_CONTEXT_KEY);
+    	if(pEraseResp->result != 0)
+    	{
+    		while(1);
+    	}
+        // First write to the NVM shadow so that it updated with default ones
+        emberGpdCopyToShadow(gpd);
+        // Write the data to NVM
+        pSaveResp = gecko_cmd_flash_ps_save(GREEN_POWER_PSSTORE_CONTEXT_KEY, sizeOfNvmData, nvmData);
+        if(pSaveResp->result != 0)
+        {
+        	while(1);
+        }
+
+    } else
+    {
+    	while(1);
+    }
+
 #endif
 
   //Store data to NVM
@@ -168,7 +199,11 @@ resp = gecko_cmd_flash_ps_load(GREEN_POWER_PSSTORE_CONTEXT_KEY)->value.data;
   #endif
 
 #ifdef MICRIUM_RTOS
-gecko_cmd_flash_ps_save(GREEN_POWER_PSSTORE_CONTEXT_KEY, sizeOfNvmData, nvmData);//56 bytes max
+	pSaveResp = gecko_cmd_flash_ps_save(GREEN_POWER_PSSTORE_CONTEXT_KEY, sizeOfNvmData, nvmData);
+	if(pSaveResp->result != 0)
+	{
+		while(1);
+	}
 #endif
 
   } else {
