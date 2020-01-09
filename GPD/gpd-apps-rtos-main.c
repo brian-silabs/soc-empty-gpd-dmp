@@ -141,10 +141,12 @@ void greenPowerAppTask(void *p_arg)
 #endif
 
         case EMBER_GPD_APP_STATE_OPERATIONAL :
+        	break;
         case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_REQUEST :
         case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_RECEIVED :
-            taskTimeoutTicks = 900;
+            taskTimeoutTicks = 0;
             sendToggle(gpdContext);
+            emberGpdSetState(EMBER_GPD_APP_STATE_OPERATIONAL);
             emberGpdStoreSecDataToNV(gpdContext);
             break;
 
@@ -206,6 +208,7 @@ int8_t GPD_DeCommission(void)
 int8_t GPD_Toggle(void)
 {
   int8_t error = 0;
+  emberGpdSetState(EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_REQUEST);
   error = gpd_Command(OPERATE_FLAG);
   return error;
 }
