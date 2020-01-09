@@ -1,4 +1,4 @@
-// Copyright 2019 Silicon Laboratories, Inc.
+// Copyright 2020 Silicon Laboratories, Inc.
 //
 //
 
@@ -59,7 +59,7 @@ GATT_DATA(const struct bg_gattdb_buffer_with_len	bg_gattdb_data_attribute_field_
 	.data={0xf0,0x19,0x21,0xb4,0x47,0x8f,0xa4,0xbf,0xa1,0x4f,0x63,0xfd,0xee,0xd6,0x14,0x1d,}
 };
 GATT_DATA(const struct bg_gattdb_attribute_chrvalue	bg_gattdb_data_attribute_field_26 ) = {
-	.properties=0x04,
+	.properties=0x08,
 	.index=6,
 	.max_len=0,
 	.data=NULL,
@@ -67,7 +67,7 @@ GATT_DATA(const struct bg_gattdb_attribute_chrvalue	bg_gattdb_data_attribute_fie
 
 GATT_DATA(const struct bg_gattdb_buffer_with_len	bg_gattdb_data_attribute_field_25 ) = {
 	.len=19,
-	.data={0x04,0x1b,0x00,0x6b,0x11,0xbf,0x24,0x22,0x0d,0x6f,0x93,0xdf,0x43,0x45,0x5e,0xbf,0xbf,0x82,0xc1,}
+	.data={0x08,0x1b,0x00,0x6b,0x11,0xbf,0x24,0x22,0x0d,0x6f,0x93,0xdf,0x43,0x45,0x5e,0xbf,0xbf,0x82,0xc1,}
 };
 GATT_DATA(const struct bg_gattdb_attribute_chrvalue	bg_gattdb_data_attribute_field_24 ) = {
 	.properties=0x08,
@@ -214,7 +214,7 @@ GATT_DATA(const struct bg_gattdb_attribute bg_gattdb_data_attributes_map[])={
     {.uuid=0x0002,.permissions=0x801,.caps=0xffff,.datatype=0x00,.constdata=&bg_gattdb_data_attribute_field_23},
     {.uuid=0x8002,.permissions=0x802,.caps=0xffff,.datatype=0x07,.dynamicdata=&bg_gattdb_data_attribute_field_24},
     {.uuid=0x0002,.permissions=0x801,.caps=0xffff,.datatype=0x00,.constdata=&bg_gattdb_data_attribute_field_25},
-    {.uuid=0x8003,.permissions=0x804,.caps=0xffff,.datatype=0x07,.dynamicdata=&bg_gattdb_data_attribute_field_26},
+    {.uuid=0x8003,.permissions=0x802,.caps=0xffff,.datatype=0x07,.dynamicdata=&bg_gattdb_data_attribute_field_26},
     {.uuid=0x0000,.permissions=0x801,.caps=0xffff,.datatype=0x00,.constdata=&bg_gattdb_data_attribute_field_27},
     {.uuid=0x0002,.permissions=0x801,.caps=0xffff,.datatype=0x00,.constdata=&bg_gattdb_data_attribute_field_28},
     {.uuid=0x8005,.permissions=0x802,.caps=0xffff,.datatype=0x07,.dynamicdata=&bg_gattdb_data_attribute_field_29},

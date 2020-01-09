@@ -69,7 +69,7 @@
     <characteristic id="gpd_toggle" name="Toggle" sourceId="custom.type" uuid="c182bfbf-5e45-43df-936f-0d2224bf116b">
       <informativeText>Custom characteristic</informativeText>
       <value length="1" type="user" variable_length="false">0x00</value>
-      <properties write_no_response="true" write_no_response_requirement="optional"/>
+      <properties write="true" write_requirement="optional"/>
     </characteristic>
   </service>
   

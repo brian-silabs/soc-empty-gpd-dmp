@@ -156,7 +156,7 @@ const COMMON_INIT_CFG       Common_InitCfg      = COMMON_INIT_CFG_APP;
 const PLATFORM_MGR_INIT_CFG PlatformMgr_InitCfg = PLATFORM_MGR_INIT_CFG_APP;
 
 // Maximum number of Bluetooth connections.
-#define MAX_CONNECTIONS 1
+#define MAX_CONNECTIONS 2
 uint8_t bluetooth_stack_heap[DEFAULT_BLUETOOTH_HEAP(MAX_CONNECTIONS)];
 // Configuration parameters (see gecko_configuration.h)
 static const gecko_configuration_t bluetooth_config =
@@ -411,22 +411,19 @@ static void bluetoothAppTask(void *p_arg)
           // Close connection to enter to GPD Commissioning.
           pRspConnCl = gecko_cmd_le_connection_close(bluetooth_evt->data.evt_gatt_server_user_write_request.connection);
           APP_ASSERT_DBG((pRspConnCl->result == bg_err_success), pRspConnCl->result);
-
         }
-        break;
 
         if (bluetooth_evt->data.evt_gatt_server_user_write_request.characteristic == gattdb_gpd_toggle) {
          //Enables the GPD commissioning process
          GPD_Toggle();
          //APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
           // Send response to Write Request.
-          // pRspWrRsp = gecko_cmd_gatt_server_send_user_write_response(
-          //   bluetooth_evt->data.evt_gatt_server_user_write_request.connection,
-          //   gattdb_gpd_toggle,
-          //   bg_err_success);
-          // APP_ASSERT_DBG((pRspWrRsp->result == bg_err_success), pRspWrRsp->result);
+           pRspWrRsp = gecko_cmd_gatt_server_send_user_write_response(
+             bluetooth_evt->data.evt_gatt_server_user_write_request.connection,
+             gattdb_gpd_toggle,
+             bg_err_success);
+           APP_ASSERT_DBG((pRspWrRsp->result == bg_err_success), pRspWrRsp->result);
         }
-        break;
 
         // Events related to OTA upgrading
         // Check if the user-type OTA Control Characteristic was written.
