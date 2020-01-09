@@ -23,15 +23,14 @@ Gecko SDK Suite 2.7.0
 ## Operation
 The device starts advertising in discoverable and connectable mode
 When operating the GP Commissioning, the BLE activity is stopped
-Advertising/Connectivity gets back after that (TODO)
+Advertising/Connectivity gets back after that
 
-Ideally, radio scheduler priorities need to be handled so that both protocols can coexist
+Ideally, radio scheduler priorities need to be handled so that both protocols can coexist at anytime
 
 ## Work to be done
 1. Repair NVM - use the BLE one
-2. Code feedback from GPD to BLE App
-3. Radio scheduler priorities need to be handled so that both protocols can coexist
-4. Check Low power operation (BLE stack might not see the GPD activity and shut down the device - not tested)
+2. Radio scheduler priorities need to be handled so that both protocols can coexist
+3. Check Low power operation (BLE stack might not see the GPD activity and shut down the device - not tested)
 
 ## Notes
 NB: GPD Channel for RX during 1st commissioning phase is always 11 (channel configuration channel)
@@ -47,4 +46,5 @@ NB: Any change to the .ISC will re-integrate the libmbedtls.a to the .cproject f
   * The GP Sink Sends the Commissioning Repliess too late (~ 74ms)
   * The GPD takes the 1st frames it receives upon RX window.
     If it is a wrong frame, another RXafterTX cycle is needed
+  * (Check if real issue) RxAfterTx flag is always set even for operationnal commands
 

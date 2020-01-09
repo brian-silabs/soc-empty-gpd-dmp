@@ -18,6 +18,10 @@
 
 #include "gpd-components-common.h"
 
+#include "gpd-apps-rtos-main.h"
+#include "rtos_gecko.h"
+
+
 // ----------- GPD application Callbacks --------------------------------------
 // This implements the following
 // -- 1. NVM Storage (NVM3 or PSSTORE)for the application - NVM3 is used.
@@ -92,6 +96,13 @@ bool emberGpdAfPluginNvSaveAndLoadCallback(EmberGpd_t * gpd,
                                            uint8_t sizeOfNvmData,
                                            EmebrGpdNvLoadStore_t loadStore)
 {
+	uint8_t * resp;
+
+  if(sizeOfNvmData > 56)
+    {
+      while(1);
+    }
+
   //Load data from NVM
   if (loadStore == EMEBER_GPD_AF_CALLBACK_LOAD_GPD_FROM_NVM) {
   #if defined EMBER_AF_PLUGIN_PSSTORE
@@ -133,7 +144,14 @@ bool emberGpdAfPluginNvSaveAndLoadCallback(EmberGpd_t * gpd,
                     nvmData,
                     sizeOfNvmData);
     }
+
+
+
   #endif
+
+#ifdef MICRIUM_RTOS
+resp = gecko_cmd_flash_ps_load(GREEN_POWER_PSSTORE_CONTEXT_KEY)->value.data;
+#endif
 
   //Store data to NVM
   } else if (loadStore == EMEBER_GPD_AF_CALLBACK_STORE_GPD_TO_NVM) {
@@ -148,6 +166,11 @@ bool emberGpdAfPluginNvSaveAndLoadCallback(EmberGpd_t * gpd,
                    nvmData,
                    sizeOfNvmData);
   #endif
+
+#ifdef MICRIUM_RTOS
+gecko_cmd_flash_ps_save(GREEN_POWER_PSSTORE_CONTEXT_KEY, sizeOfNvmData, nvmData);//56 bytes max
+#endif
+
   } else {
     // bad command
   }
