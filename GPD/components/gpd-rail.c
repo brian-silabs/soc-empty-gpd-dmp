@@ -28,6 +28,20 @@ static RAIL_Config_t railCfg = {
   .scheduler = &railSchedState
 };
 
+static RAIL_SchedulerInfo_t rxSchedInfo = 
+{
+  .priority = 0,
+  .slipTime = 0,
+  .transactionTime = EMBER_AF_PLUGIN_APPS_RX_WINDOW * 1000
+};
+  
+static RAIL_SchedulerInfo_t txSchedInfo = 
+{
+  .priority = 0,
+  .slipTime = 10000,
+  .transactionTime = 2000
+};
+
 static uint8_t railTxFifo[GP_FIFO_SIZE];
 static uint8_t railRxFifo[GP_FIFO_SIZE];
 
@@ -42,13 +56,14 @@ static void RAILCb_Generic(RAIL_Handle_t railHandle, RAIL_Events_t events)
     emberGpdIncomingMessageHandler(emberGpdGetRxMpdu(), rxReceived);
     CORE_ExitCritical(c);
     RAIL_YieldRadio(railHandle);
-  } else if (events & (RAIL_EVENT_TX_PACKET_SENT
-						  | RAIL_EVENT_TX_ABORTED
-						  | RAIL_EVENT_TX_UNDERFLOW
-						  | RAIL_EVENT_SCHEDULER_STATUS)) {
-	RAIL_YieldRadio(railHandle);
   }
+  if (events & RAIL_EVENT_TX_PACKET_SENT) {
+	  RAIL_YieldRadio(railHandle);
+  }
+  if (events & RAIL_EVENT_SCHEDULER_STATUS)
+  {
 
+  }
 }
 
 static void RAIL_CbRfReady(RAIL_Handle_t railHandle)
@@ -58,7 +73,7 @@ static void RAIL_CbRfReady(RAIL_Handle_t railHandle)
 
 void emberGpdRailStartRxWrapper(uint8_t channel)
 {
-  RAIL_StartRx(railHandle, channel, NULL);
+  RAIL_StartRx(railHandle, channel, &rxSchedInfo);
 }
 
 void emberGpdRailIdleWrapper(void)
@@ -74,14 +89,14 @@ void emberGpdRailStartTxWrapper(bool skipCca,
     status = RAIL_StartTx(railHandle,
                           channel,
                           RAIL_TX_OPTIONS_DEFAULT,
-                          NULL);
+                          &txSchedInfo);
   } else {
     RAIL_CsmaConfig_t txCsmaOptions = RAIL_CSMA_CONFIG_802_15_4_2003_2p4_GHz_OQPSK_CSMA;
     status = RAIL_StartCcaCsmaTx(railHandle,
                                  channel,
                                  RAIL_TX_OPTIONS_DEFAULT,
                                  &txCsmaOptions,
-                                 NULL);
+                                 &txSchedInfo);
   }
   if (status != 0) {
     while (true) ; // Error - Trap it
@@ -151,7 +166,8 @@ void emberGpdRadioInit(void)
   }
 
   // Configure all RAIL events with appended info
-  RAIL_Events_t events = RAIL_EVENT_RX_PACKET_RECEIVED;
+  RAIL_Events_t events =    RAIL_EVENTS_RX_COMPLETION
+                          | RAIL_EVENTS_TX_COMPLETION;
   if (RAIL_ConfigEvents(railHandle, RAIL_EVENTS_ALL, events) != RAIL_STATUS_NO_ERROR) {
     while (true) ;
   }

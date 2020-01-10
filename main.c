@@ -391,6 +391,12 @@ static void bluetoothAppTask(void *p_arg)
         if (boot_to_dfu) {
           // Enter to DFU OTA mode.
           gecko_cmd_system_reset(2);
+        } else {
+          // Restart advertising after client has disconnected.
+          pRspAdv = gecko_cmd_le_gap_start_advertising(0,
+                                                       le_gap_general_discoverable,
+                                                       le_gap_connectable_scannable);
+          APP_ASSERT_DBG((pRspAdv->result == bg_err_success), pRspAdv->result);
         }
         break;
 
@@ -412,8 +418,8 @@ static void bluetoothAppTask(void *p_arg)
 
           //TODO change RF priorities so that GPDFs remain clear of any BLE activity
           // Close connection to enter to GPD Commissioning.
-          pRspConnCl = gecko_cmd_le_connection_close(bluetooth_evt->data.evt_gatt_server_user_write_request.connection);
-          APP_ASSERT_DBG((pRspConnCl->result == bg_err_success), pRspConnCl->result);
+          // pRspConnCl = gecko_cmd_le_connection_close(bluetooth_evt->data.evt_gatt_server_user_write_request.connection);
+          // APP_ASSERT_DBG((pRspConnCl->result == bg_err_success), pRspConnCl->result);
         }
 
         if (bluetooth_evt->data.evt_gatt_server_user_write_request.characteristic == gattdb_gpd_decommissioning) {
