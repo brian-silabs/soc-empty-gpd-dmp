@@ -162,7 +162,7 @@ uint8_t bluetooth_stack_heap[DEFAULT_BLUETOOTH_HEAP(MAX_CONNECTIONS)];
 static const gecko_configuration_t bluetooth_config =
 {
   .config_flags = GECKO_CONFIG_FLAG_RTOS,
-  .sleep.flags = 0,
+  .sleep.flags = SLEEP_FLAGS_DEEP_SLEEP_ENABLE,
   .bluetooth.max_connections = MAX_CONNECTIONS,
   .bluetooth.heap = bluetooth_stack_heap,
   .bluetooth.heap_size = sizeof(bluetooth_stack_heap),
