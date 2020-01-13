@@ -265,6 +265,9 @@ enum {
   EMBER_GPD_APP_STATE_CHANNEL_RECEIVED,
   EMBER_GPD_APP_STATE_COMMISSIONING_REQUEST,
   EMBER_GPD_APP_STATE_COMMISSIONING_REPLY_RECIEVED,
+#ifdef MICRIUM_RTOS
+  EMBER_GPD_APP_STATE_COMMISSIONING_REPLY_RECIEVED_DECRYPT_KEY,
+#endif
   EMBER_GPD_APP_STATE_COMMISSIONING_SUCCESS_REQUEST,
   EMBER_GPD_APP_STATE_OPERATIONAL,
   EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_REQUEST,
@@ -300,6 +303,7 @@ typedef struct {
   uint8_t rxAfterTx;
   uint8_t rxOffset;
   uint8_t minRxWindow;
+  uint8_t currentCommReq;
   EmberGpdSecurityLevel_t securityLevel;
   EmberGpdSecurityKeyType_t securityKeyType;
   uint8_t securityKey[16];
@@ -308,6 +312,11 @@ typedef struct {
   uint8_t channel;
   EmberGpdRadioState_t radioState;
   EmberGpdApplicationState_t gpdState;
+#ifdef MICRIUM_RTOS
+  uint32_t savedCommissioningReplyKeyMic;
+  uint32_t savedCommissioningReplyRxSecCounter;
+  uint8_t savedCommissioningReplySecurityKey[16];
+#endif
 }EmberGpd_t;
 
 // Function Prototypes
@@ -401,6 +410,9 @@ uint8_t emberBuildOutGoingPdu(uint8_t frameType,
 int8_t emberGpdProcessCommissioningReply(EmberGpd_t * gpd,
                                          uint8_t payload_size,
                                          uint8_t * pRxbuffer);
+#ifdef MICRIUM_RTOS
+int8_t emberGpdAfPluginDecryptReceivedKey(EmberGpd_t * gpd);
+#endif
 // Gpd Node
 EmberGpd_t * emberGpdInit(void);
 EmberGpd_t * emberGpdGetGpd(void);

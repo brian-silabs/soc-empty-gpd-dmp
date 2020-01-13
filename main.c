@@ -66,6 +66,9 @@
 
 #include "mbedtls/threading.h"
 
+//This file includes shared code between BLE and GP
+#include "gpd-apps-rtos-main.h"
+
 // Ex Main Start task
 #define EX_MAIN_START_TASK_PRIO           21u
 #define EX_MAIN_START_TASK_STK_SIZE       512u
@@ -82,13 +85,6 @@ static void    exMainStartTask(void *p_arg);
 static CPU_STK bluetoothAppTaskStk[BLUETOOTH_APP_TASK_STACK_SIZE];
 static OS_TCB  bluetoothAppTaskTCB;
 static void    bluetoothAppTask(void *p_arg);
-
-// Proprietary Application task
-#define PROPRIETARY_APP_TASK_PRIO         6u
-#define PROPRIETARY_APP_TASK_STACK_SIZE   (1024 / sizeof(CPU_STK))
-static CPU_STK proprietaryAppTaskStk[PROPRIETARY_APP_TASK_STACK_SIZE];
-static OS_TCB  proprietaryAppTaskTCB;
-static void    proprietaryAppTask(void *p_arg);
 
 // Timer Task Configuration
 #if (OS_CFG_TMR_EN == DEF_ENABLED)
@@ -166,7 +162,7 @@ uint8_t bluetooth_stack_heap[DEFAULT_BLUETOOTH_HEAP(MAX_CONNECTIONS)];
 static const gecko_configuration_t bluetooth_config =
 {
   .config_flags = GECKO_CONFIG_FLAG_RTOS,
-  .sleep.flags = 0,
+  .sleep.flags = SLEEP_FLAGS_DEEP_SLEEP_ENABLE,
   .bluetooth.max_connections = MAX_CONNECTIONS,
   .bluetooth.heap = bluetooth_stack_heap,
   .bluetooth.heap_size = sizeof(bluetooth_stack_heap),
@@ -188,23 +184,6 @@ static const gecko_configuration_t bluetooth_config =
   .mbedtls.dev_number = 0,
 };
 static uint8_t boot_to_dfu = 0;
-
-// Proprietary radio
-static RAIL_Handle_t railHandle = NULL;
-static RAILSched_Config_t railSchedState;
-static void radioEventHandler(RAIL_Handle_t railHandle,
-                              RAIL_Events_t events);
-static RAIL_Config_t railCfg = {
-  .eventsCallback = &radioEventHandler,
-  .protocol = NULL,
-  .scheduler = &railSchedState,
-};
-
-/* OS Event Flag Group */
-OS_FLAG_GRP  proprietary_event_flags;
-/* Dummy flag to prevent cyclic execution of the proprietary task function code.
- * this flag will not be posted by default. */
-#define DUMMY_FLAG  ((OS_FLAGS)0x01)
 
 /**************************************************************************//**
  * Main.
@@ -229,6 +208,8 @@ int main(void)
   // Initialize the Kernel.
   OSInit(&err);
   APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(err) == RTOS_ERR_NONE), 1);
+  // Initialize DMP Crypto block share.
+  THREADING_setup();
   // Don't allow EM3, since we use LF clocks.
   CORE_ENTER_ATOMIC();
   SLEEP_SleepBlockBegin(sleepEM3);
@@ -278,7 +259,6 @@ void OSIdleEnterHook(void)
  ******************************************************************************/
 static errorcode_t initialize_bluetooth()
 {
-  THREADING_setup();
   errorcode_t err = gecko_init(&bluetooth_config);
   if (err == bg_err_success) {
     gecko_init_multiprotocol(NULL);
@@ -326,14 +306,14 @@ static void exMainStartTask(void *p_arg)
   APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(err) == RTOS_ERR_NONE), 1);
 
   // Create the Proprietary Application task
-  OSTaskCreate(&proprietaryAppTaskTCB,
-               "Proprietary App Task",
-               proprietaryAppTask,
+  OSTaskCreate(&greenPowerAppTaskTCB,
+               "Green Power App Task",
+               greenPowerAppTask,
                0u,
-               PROPRIETARY_APP_TASK_PRIO,
-               &proprietaryAppTaskStk[0u],
-               (PROPRIETARY_APP_TASK_STACK_SIZE / 10u),
-               PROPRIETARY_APP_TASK_STACK_SIZE,
+               GREEN_POWER_APP_TASK_PRIO,
+               &greenPowerAppTaskStk[0u],
+               (GREEN_POWER_APP_TASK_STACK_SIZE / 10u),
+               GREEN_POWER_APP_TASK_STACK_SIZE,
                0u,
                0u,
                0u,
@@ -388,6 +368,10 @@ static void bluetoothAppTask(void *p_arg)
       // Here the system is set to start advertising immediately after boot
       // procedure.
       case gecko_evt_system_boot_id:
+         //Enable the GPD stack
+         GPD_Init();
+         //APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
+
         // Set advertising parameters. 100ms advertisement interval.
         // The first parameter is advertising set handle
         // The next two parameters are minimum and maximum advertising
@@ -416,11 +400,56 @@ static void bluetoothAppTask(void *p_arg)
         }
         break;
 
-      // Events related to OTA upgrading
-      // Check if the user-type OTA Control Characteristic was written.
-      // If ota_control was written, boot the device into Device Firmware
-      // Upgrade (DFU) mode.
+      case gecko_evt_le_connection_opened_id:
+
+        break;
+
       case gecko_evt_gatt_server_user_write_request_id:
+        if (bluetooth_evt->data.evt_gatt_server_user_write_request.characteristic == gattdb_gpd_commissioning) {
+         //Enables the GPD commissioning process
+         GPD_StartCommissioning();
+         //APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
+          // Send response to Write Request.
+          pRspWrRsp = gecko_cmd_gatt_server_send_user_write_response(
+            bluetooth_evt->data.evt_gatt_server_user_write_request.connection,
+            gattdb_gpd_commissioning,
+            bg_err_success);
+          APP_ASSERT_DBG((pRspWrRsp->result == bg_err_success), pRspWrRsp->result);
+
+          //TODO change RF priorities so that GPDFs remain clear of any BLE activity
+          // Close connection to enter to GPD Commissioning.
+          // pRspConnCl = gecko_cmd_le_connection_close(bluetooth_evt->data.evt_gatt_server_user_write_request.connection);
+          // APP_ASSERT_DBG((pRspConnCl->result == bg_err_success), pRspConnCl->result);
+        }
+
+        if (bluetooth_evt->data.evt_gatt_server_user_write_request.characteristic == gattdb_gpd_decommissioning) {
+         //Enables the GPD commissioning process
+         GPD_DeCommission();
+         //APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
+          // Send response to Write Request.
+           pRspWrRsp = gecko_cmd_gatt_server_send_user_write_response(
+             bluetooth_evt->data.evt_gatt_server_user_write_request.connection,
+             gattdb_gpd_decommissioning,
+             bg_err_success);
+           APP_ASSERT_DBG((pRspWrRsp->result == bg_err_success), pRspWrRsp->result);
+        }
+
+        if (bluetooth_evt->data.evt_gatt_server_user_write_request.characteristic == gattdb_gpd_toggle) {
+         //Enables the GPD commissioning process
+         GPD_Toggle();
+         //APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
+          // Send response to Write Request.
+           pRspWrRsp = gecko_cmd_gatt_server_send_user_write_response(
+             bluetooth_evt->data.evt_gatt_server_user_write_request.connection,
+             gattdb_gpd_toggle,
+             bg_err_success);
+           APP_ASSERT_DBG((pRspWrRsp->result == bg_err_success), pRspWrRsp->result);
+        }
+
+        // Events related to OTA upgrading
+        // Check if the user-type OTA Control Characteristic was written.
+        // If ota_control was written, boot the device into Device Firmware
+        // Upgrade (DFU) mode.
         if (bluetooth_evt->data.evt_gatt_server_user_write_request.characteristic == gattdb_ota_control) {
           // Set flag to enter to OTA mode.
           boot_to_dfu = 1;
@@ -436,6 +465,24 @@ static void bluetoothAppTask(void *p_arg)
         }
         break;
 
+      case gecko_evt_system_external_signal_id:
+        if(bluetooth_evt->data.evt_system_external_signal.extsignals == GPD_EVENT_INIT_OVER)
+        {
+
+        }
+        if (bluetooth_evt->data.evt_system_external_signal.extsignals == GPD_EVENT_COMMISSIONING_OVER)
+        {
+           pRspAdv = gecko_cmd_le_gap_start_advertising( 0,
+                                                         le_gap_general_discoverable,
+                                                         le_gap_connectable_scannable);
+           APP_ASSERT_DBG((pRspAdv->result == bg_err_success), pRspAdv->result);
+        }
+        if (bluetooth_evt->data.evt_system_external_signal.extsignals == GPD_EVENT_DECOMMISSIONING_OVER)
+        {
+
+        }
+        break;
+
       default:
         break;
     }
@@ -446,78 +493,4 @@ static void bluetoothAppTask(void *p_arg)
                &osErr);
     APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
   }
-}
-
-/**************************************************************************//**
- * Proprietary Application task.
- *
- * @param p_arg Pointer to an optional data area which can pass parameters to
- *              the task when the task executes.
- *
- * This is a minimal Proprietary Application task that only configures the
- * radio.
- *****************************************************************************/
-static void proprietaryAppTask(void *p_arg)
-{
-  PP_UNUSED_PARAM(p_arg);
-  RTOS_ERR err;
-
-  // Create each RAIL handle with their own configuration structures
-  railHandle = RAIL_Init(&railCfg, NULL);
-  // Configure radio according to the generated radio settings
-  RAIL_TxPowerConfig_t railTxPowerConfig = {
-#if HAL_PA_2P4_LOWPOWER
-    .mode = RAIL_TX_POWER_MODE_2P4_LP,
-#else
-    .mode = RAIL_TX_POWER_MODE_2P4_HP,
-#endif
-    .voltage = HAL_PA_VOLTAGE,
-    .rampTime = HAL_PA_RAMP,
-  };
-
-#if !defined(_SILICON_LABS_32B_SERIES_2)
-  if (channelConfigs[0]->configs[0].baseFrequency < 1000000000UL) {
-    // Use the Sub-GHz PA if required
-    railTxPowerConfig.mode = RAIL_TX_POWER_MODE_SUBGIG;
-  }
-#endif
-  if (RAIL_ConfigTxPower(railHandle, &railTxPowerConfig) != RAIL_STATUS_NO_ERROR) {
-    while (1) ;
-  }
-  // We must reapply the Tx power after changing the PA above
-  RAIL_SetTxPower(railHandle, HAL_PA_POWER);
-#if !defined(_SILICON_LABS_32B_SERIES_2)
-  RAIL_ConfigChannels(railHandle, channelConfigs[0], NULL);
-#else
-  //
-  // Put your Radio Configuration here!
-  //
-#endif
-  // Configure the most useful callbacks plus catch a few errors
-  RAIL_ConfigEvents(railHandle,
-                    RAIL_EVENTS_ALL,
-                    RAIL_EVENTS_ALL);
-
-  while (DEF_TRUE) {
-    // Wait for the dummy flag. Use this flag to stop waiting with the execution of your code.
-    OSFlagPend(&proprietary_event_flags,
-               DUMMY_FLAG,
-               (OS_TICK)0,
-               OS_OPT_PEND_BLOCKING       \
-               + OS_OPT_PEND_FLAG_SET_ANY \
-               + OS_OPT_PEND_FLAG_CONSUME,
-               NULL,
-               &err);
-    APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(err) == RTOS_ERR_NONE), 1);
-    //
-    // Put your code here!
-    //
-  }
-}
-
-static void radioEventHandler(RAIL_Handle_t railHandle,
-                              RAIL_Events_t events)
-{
-  PP_UNUSED_PARAM(railHandle);
-  PP_UNUSED_PARAM(events);
 }

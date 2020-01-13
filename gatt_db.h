@@ -1,4 +1,4 @@
-// Copyright 2019 Silicon Laboratories, Inc.
+// Copyright 2020 Silicon Laboratories, Inc.
 //
 //
 
@@ -17,6 +17,9 @@ extern const struct bg_gattdb_def bg_gattdb_data;
 #define gattdb_database_hash                    6
 #define gattdb_client_support_features          8
 #define gattdb_device_name                     11
-#define gattdb_ota_control                     23
+#define gattdb_gpd_commissioning               23
+#define gattdb_gpd_decommissioning             25
+#define gattdb_gpd_toggle                      27
+#define gattdb_ota_control                     30
 
 #endif
