@@ -52,6 +52,8 @@
 #include "rtos_gecko.h"
 #include "gatt_db.h"
 
+#include "rtos_gpd.h"
+
 #include "rail.h"
 #include "rail_types.h"
 #if !defined(_SILICON_LABS_32B_SERIES_2)
@@ -67,7 +69,7 @@
 #include "mbedtls/threading.h"
 
 //This file includes shared code between BLE and GP
-#include "gpd-apps-rtos-main.h"
+//#include "gpd-apps-rtos-main.h"
 
 // Ex Main Start task
 #define EX_MAIN_START_TASK_PRIO           21u
@@ -85,6 +87,18 @@ static void    exMainStartTask(void *p_arg);
 static CPU_STK bluetoothAppTaskStk[BLUETOOTH_APP_TASK_STACK_SIZE];
 static OS_TCB  bluetoothAppTaskTCB;
 static void    bluetoothAppTask(void *p_arg);
+
+
+#define APP_CFG_TASK_GPD_LL_PRIO          6u
+#define APP_CFG_TASK_GPD_STACK_PRIO 7u
+
+// GPD Application task
+#define GPD_APP_TASK_PRIO           8u
+#define GPD_APP_TASK_STACK_SIZE     (1024 / sizeof(CPU_STK))
+static CPU_STK gpdAppTaskStk[GPD_APP_TASK_STACK_SIZE];
+static OS_TCB  gpdAppTaskTCB;
+static void    gpdAppTask(void *p_arg);
+
 
 // Timer Task Configuration
 #if (OS_CFG_TMR_EN == DEF_ENABLED)
@@ -306,14 +320,14 @@ static void exMainStartTask(void *p_arg)
   APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(err) == RTOS_ERR_NONE), 1);
 
   // Create the Proprietary Application task
-  OSTaskCreate(&greenPowerAppTaskTCB,
+  OSTaskCreate(&gpdAppTaskTCB,
                "Green Power App Task",
-               greenPowerAppTask,
+               gpdAppTask,
                0u,
-               GREEN_POWER_APP_TASK_PRIO,
-               &greenPowerAppTaskStk[0u],
-               (GREEN_POWER_APP_TASK_STACK_SIZE / 10u),
-               GREEN_POWER_APP_TASK_STACK_SIZE,
+               GPD_APP_TASK_PRIO,
+               &gpdAppTaskStk[0u],
+               (GPD_APP_TASK_STACK_SIZE / 10u),
+               GPD_APP_TASK_STACK_SIZE,
                0u,
                0u,
                0u,
@@ -489,6 +503,74 @@ static void bluetoothAppTask(void *p_arg)
 
     OSFlagPost(&bluetooth_event_flags,
                (OS_FLAGS)BLUETOOTH_EVENT_FLAG_EVT_HANDLED,
+               OS_OPT_POST_FLAG_SET,
+               &osErr);
+    APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
+  }
+}
+
+
+
+
+/***************************************************************************//**
+ * Setup the bluetooth init function.
+ *
+ * @return error code for the gecko_init function
+ *
+ * All bluetooth specific initialization code should be here like gecko_init(),
+ * gecko_init_whitelisting(), gecko_init_multiprotocol() and so on.
+ ******************************************************************************/
+static uint8_t initialize_gpd()
+{
+  uint8_t err = gpd_init();
+  APP_RTOS_ASSERT_DBG((err == 0), 1);
+  return err;
+}
+
+
+/**************************************************************************//**
+ * Bluetooth Application task.
+ *
+ * @param p_arg Pointer to an optional data area which can pass parameters to
+ *              the task when the task executes.
+ *
+ * This is a minimal Bluetooth Application task that starts advertising after
+ * boot and supports OTA upgrade feature.
+ *****************************************************************************/
+static void gpdAppTask(void *p_arg)
+{
+  PP_UNUSED_PARAM(p_arg);
+  RTOS_ERR osErr;
+  uint8_t initErr;
+
+  // Create Bluetooth Link Layer and stack tasks
+  gpd_start(APP_CFG_TASK_BLUETOOTH_LL_PRIO,
+                  APP_CFG_TASK_BLUETOOTH_STACK_PRIO,
+                  initialize_gpd);
+
+  while (DEF_TRUE) {
+    OSFlagPend(&gpd_event_flags,
+               (OS_FLAGS)GPD_EVENT_FLAG_EVT_WAITING,
+               (OS_TICK)0,
+               OS_OPT_PEND_BLOCKING       \
+               + OS_OPT_PEND_FLAG_SET_ANY \
+               + OS_OPT_PEND_FLAG_CONSUME,
+               NULL,
+               &osErr);
+    APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
+
+    // switch (0)
+    // {
+    // case /* constant-expression */:
+    //   /* code */
+    //   break;
+    
+    // default:
+    //   break;
+    // }
+
+    OSFlagPost(&gpd_event_flags,
+               (OS_FLAGS)GPD_EVENT_FLAG_EVT_HANDLED,
                OS_OPT_POST_FLAG_SET,
                &osErr);
     APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
