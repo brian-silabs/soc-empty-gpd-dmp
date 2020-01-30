@@ -47,6 +47,10 @@
 //mbedtls
 #include "ccm.h"
 
+#ifdef MICRIUM_RTOS
+#include "rtos_gpd.h"
+#endif
+
 // Common defines
 #define FAILED  (-1)
 #define SUCCESS (0)

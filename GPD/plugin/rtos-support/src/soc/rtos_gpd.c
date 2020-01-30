@@ -21,14 +21,17 @@
 #include  <common/include/rtos_utils.h>
 
 #include "rtos_gpd.h"
+#include "gpd-components-common.h"
 #include <rtos_utils.h>
 
 void GpdUpdate();
-volatile struct gpd_cmd_packet*  gpd_evt;
+//volatile struct gpd_cmd_packet*  gpd_evt;
+volatile gpd_ll_event_t *gpd_ll_evt;
+
 OS_MUTEX           GpdMutex;
 
-volatile static uint32_t command_header;
-volatile static void*    command_data;
+//volatile static uint32_t command_header;
+//volatile static void*    command_data;
 //volatile static gpd_cmd_handler command_handler_func = NULL;
 
 //Gpd task
@@ -130,9 +133,10 @@ void GpdTask(void *p)
   while (DEF_TRUE) {
     //Command needs to be sent to Gpd stack
     if (flags & GPD_EVENT_FLAG_CMD_WAITING) {
-      uint32_t header = command_header;
+      //uint32_t header = command_header;
       // gpd_cmd_handler cmd_handler = command_handler_func;
       // sli_bt_cmd_handler_delegate(header, cmd_handler, (void*)command_data);
+      gpd_cmd_rtos_delegate();
       // command_handler_func = NULL;
       flags &= ~GPD_EVENT_FLAG_CMD_WAITING;
       OSFlagPost(&gpd_event_flags, (OS_FLAGS)GPD_EVENT_FLAG_RSP_WAITING, OS_OPT_POST_FLAG_SET, &os_err);
@@ -141,7 +145,7 @@ void GpdTask(void *p)
     //Gpd stack needs updating, and evt can be used
     if (gecko_event_pending() && (flags & GPD_EVENT_FLAG_EVT_HANDLED)) {  //update bluetooth & read event
       //gpd_evt = gpd_wait_event();
-      APP_RTOS_ASSERT_DBG(gpd_evt, 1);
+      //APP_RTOS_ASSERT_DBG(gpd_evt, 1);
       OSFlagPost(&gpd_event_flags, (OS_FLAGS)GPD_EVENT_FLAG_EVT_WAITING, OS_OPT_POST_FLAG_SET, &os_err);
       flags &= ~(GPD_EVENT_FLAG_EVT_HANDLED);
       // if (wakeupCB != NULL) {
@@ -188,15 +192,21 @@ static  void  GpdLinklayerTask(void *p_arg)
                NULL,
                &os_err);
 
-    //TODO handle events here (i.e. decoding RX packets, handling RX data and Maintenance frames etc)
+    //TODO handle RAIL events here (i.e. decoding RX packets, handling RX data and Maintenance frames etc)
+    switch (gpd_ll_evt->type) {
+      case gpd_ll_event_packet_received:
+        emberGpdIncomingMessageHandler(gpd_ll_evt->data.data, gpd_ll_evt->data.dataSize);
+        break;
+      default:
+        break;
+    }
 
-    //gecko_priority_handle(); //TODO replace that
   }
 }
 
 //hooks for API
 //called from tasks using BGAPI
-void sli_gpd_cmd_handler_rtos_delegate(void)
+void gpd_cmd_rtos_delegate(void)
 {
   RTOS_ERR os_err;
 

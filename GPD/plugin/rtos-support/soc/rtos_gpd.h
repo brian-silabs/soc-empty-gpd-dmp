@@ -17,6 +17,7 @@
 #ifndef RTOS_GPD_H
 #define RTOS_GPD_H
 
+#include <stdint.h>
 #include <kernel/include/os.h>
 
 //Gpd event flag group
@@ -30,7 +31,27 @@ extern OS_FLAG_GRP gpd_event_flags;
 #define GPD_EVENT_FLAG_EVT_HANDLED ((OS_FLAGS)32)   //BGAPI event is handled
 
 //Gpd event data pointer
-extern volatile struct gpd_cmd_packet*  gpd_evt;
+//extern volatile struct gpd_cmd_packet*  gpd_evt;
+
+
+typedef enum gpd_ll_event_type {
+  gpd_ll_event_packet_received,
+  gpd_ll_event_failure
+} gpd_ll_event_type_t;
+
+typedef struct gpd_ll_event_data
+{
+    uint32_t dataSize;
+    uint8_t *data;
+} gpd_ll_event_data_t;
+
+typedef struct
+{
+    gpd_ll_event_type_t type;
+    gpd_ll_event_data_t data;
+} gpd_ll_event_t;
+
+extern volatile gpd_ll_event_t *gpd_ll_evt;
 
 // Function prototype for initializing GPD stack.
 typedef uint8_t(*gpd_stack_init_func)();

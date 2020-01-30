@@ -391,9 +391,9 @@ static void bluetoothAppTask(void *p_arg)
         pRspAdvT = gecko_cmd_le_gap_set_advertise_timing(0, 160, 160, 0, 0);
         APP_ASSERT_DBG((pRspAdvT->result == bg_err_success), pRspAdvT->result);
         // Start general advertising and enable connections.
-        pRspAdv = gecko_cmd_le_gap_start_advertising(0,
-                                                     le_gap_general_discoverable,
-                                                     le_gap_connectable_scannable);
+//        pRspAdv = gecko_cmd_le_gap_start_advertising(0,
+//                                                     le_gap_general_discoverable,
+//                                                     le_gap_connectable_scannable);
         APP_ASSERT_DBG((pRspAdv->result == bg_err_success), pRspAdv->result);
         break;
 
@@ -541,8 +541,8 @@ static void gpdAppTask(void *p_arg)
   uint8_t initErr;
 
   // Create Bluetooth Link Layer and stack tasks
-  gpd_start(APP_CFG_TASK_BLUETOOTH_LL_PRIO,
-                  APP_CFG_TASK_BLUETOOTH_STACK_PRIO,
+  gpd_start(APP_CFG_TASK_GPD_LL_PRIO,
+                  APP_CFG_TASK_GPD_STACK_PRIO,
                   initialize_gpd);
 
   while (DEF_TRUE) {

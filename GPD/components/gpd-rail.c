@@ -15,6 +15,7 @@
  *
  ******************************************************************************/
 #include "gpd-components-common.h"
+#include "rtos_gpd.h"
 
 // Function prototype
 static void RAILCb_Generic(RAIL_Handle_t railHandle, RAIL_Events_t events);
@@ -53,7 +54,15 @@ static void RAILCb_Generic(RAIL_Handle_t railHandle, RAIL_Events_t events)
     CORE_irqState_t c = CORE_EnterCritical();
     uint16_t bytesAvailable = RAIL_GetRxFifoBytesAvailable(railHandle);
     uint16_t rxReceived = RAIL_ReadRxFifo(railHandle, emberGpdGetRxMpdu(), bytesAvailable);
+#ifdef MICRIUM_RTOS
+    gpd_ll_evt->type = gpd_ll_event_packet_received;//TODO Create an API for this one
+    gpd_ll_evt->data.data = emberGpdGetRxMpdu();
+    gpd_ll_evt->data.dataSize = rxReceived;
+
+    GpdLLCallback();
+#else
     emberGpdIncomingMessageHandler(emberGpdGetRxMpdu(), rxReceived);
+#endif
     CORE_ExitCritical(c);
     RAIL_YieldRadio(railHandle);
   }
