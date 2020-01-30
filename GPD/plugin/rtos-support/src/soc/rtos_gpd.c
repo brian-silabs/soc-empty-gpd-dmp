@@ -140,7 +140,7 @@ void GpdTask(void *p)
 
     //Gpd stack needs updating, and evt can be used
     if (gecko_event_pending() && (flags & GPD_EVENT_FLAG_EVT_HANDLED)) {  //update bluetooth & read event
-      gpd_evt = gpd_wait_event();
+      //gpd_evt = gpd_wait_event();
       APP_RTOS_ASSERT_DBG(gpd_evt, 1);
       OSFlagPost(&gpd_event_flags, (OS_FLAGS)GPD_EVENT_FLAG_EVT_WAITING, OS_OPT_POST_FLAG_SET, &os_err);
       flags &= ~(GPD_EVENT_FLAG_EVT_HANDLED);

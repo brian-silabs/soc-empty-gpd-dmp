@@ -300,9 +300,6 @@ static void exMainStartTask(void *p_arg)
   CPU_IntDisMeasMaxCurReset();
 #endif
 
-  // Initialize the flag group for the proprietary task
-  OSFlagCreate(&proprietary_event_flags, "Prop. flags", (OS_FLAGS)0, &err);
-
   // Create the Bluetooth Application task
   OSTaskCreate(&bluetoothAppTaskTCB,
                "Bluetooth App Task",
@@ -479,23 +476,23 @@ static void bluetoothAppTask(void *p_arg)
         }
         break;
 
-      case gecko_evt_system_external_signal_id:
-        if(bluetooth_evt->data.evt_system_external_signal.extsignals == GPD_EVENT_INIT_OVER)
-        {
-
-        }
-        if (bluetooth_evt->data.evt_system_external_signal.extsignals == GPD_EVENT_COMMISSIONING_OVER)
-        {
-           pRspAdv = gecko_cmd_le_gap_start_advertising( 0,
-                                                         le_gap_general_discoverable,
-                                                         le_gap_connectable_scannable);
-           APP_ASSERT_DBG((pRspAdv->result == bg_err_success), pRspAdv->result);
-        }
-        if (bluetooth_evt->data.evt_system_external_signal.extsignals == GPD_EVENT_DECOMMISSIONING_OVER)
-        {
-
-        }
-        break;
+//      case gecko_evt_system_external_signal_id:
+//        if(bluetooth_evt->data.evt_system_external_signal.extsignals == GPD_EVENT_INIT_OVER)
+//        {
+//
+//        }
+//        if (bluetooth_evt->data.evt_system_external_signal.extsignals == GPD_EVENT_COMMISSIONING_OVER)
+//        {
+//           pRspAdv = gecko_cmd_le_gap_start_advertising( 0,
+//                                                         le_gap_general_discoverable,
+//                                                         le_gap_connectable_scannable);
+//           APP_ASSERT_DBG((pRspAdv->result == bg_err_success), pRspAdv->result);
+//        }
+//        if (bluetooth_evt->data.evt_system_external_signal.extsignals == GPD_EVENT_DECOMMISSIONING_OVER)
+//        {
+//
+//        }
+//        break;
 
       default:
         break;
@@ -522,7 +519,7 @@ static void bluetoothAppTask(void *p_arg)
  ******************************************************************************/
 static uint8_t initialize_gpd()
 {
-  uint8_t err = gpd_init();
+  uint8_t err = GPD_Init();
   APP_RTOS_ASSERT_DBG((err == 0), 1);
   return err;
 }
