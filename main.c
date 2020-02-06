@@ -379,8 +379,6 @@ static void bluetoothAppTask(void *p_arg)
       // Here the system is set to start advertising immediately after boot
       // procedure.
       case gecko_evt_system_boot_id:
-         //Enable the GPD stack
-         GPD_Init();
          //APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
 
         // Set advertising parameters. 100ms advertisement interval.
@@ -418,7 +416,7 @@ static void bluetoothAppTask(void *p_arg)
       case gecko_evt_gatt_server_user_write_request_id:
         if (bluetooth_evt->data.evt_gatt_server_user_write_request.characteristic == gattdb_gpd_commissioning) {
          //Enables the GPD commissioning process
-         GPD_StartCommissioning();
+         //GPD_StartCommissioning();
          //APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
           // Send response to Write Request.
           pRspWrRsp = gecko_cmd_gatt_server_send_user_write_response(
@@ -435,7 +433,7 @@ static void bluetoothAppTask(void *p_arg)
 
         if (bluetooth_evt->data.evt_gatt_server_user_write_request.characteristic == gattdb_gpd_decommissioning) {
          //Enables the GPD commissioning process
-         GPD_DeCommission();
+         //GPD_DeCommission();
          //APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
           // Send response to Write Request.
            pRspWrRsp = gecko_cmd_gatt_server_send_user_write_response(
@@ -447,7 +445,7 @@ static void bluetoothAppTask(void *p_arg)
 
         if (bluetooth_evt->data.evt_gatt_server_user_write_request.characteristic == gattdb_gpd_toggle) {
          //Enables the GPD commissioning process
-         GPD_Toggle();
+         //GPD_Toggle();
          //APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
           // Send response to Write Request.
            pRspWrRsp = gecko_cmd_gatt_server_send_user_write_response(

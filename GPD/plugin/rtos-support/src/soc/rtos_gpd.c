@@ -116,6 +116,7 @@ void GpdLLCallback()
   RTOS_ERR os_err;
   OSFlagPost(&gpd_event_flags, (OS_FLAGS)GPD_EVENT_FLAG_LL, OS_OPT_POST_FLAG_SET, &os_err);
 }
+
 //This callback is called from Gpd stack
 //Called from kernel aware interrupt context (RTCC interrupt) and from Gpd task
 //sets flag to trigger running Gpd stack
@@ -129,23 +130,64 @@ void GpdTask(void *p)
 {
   RTOS_ERR      os_err;
   OS_FLAGS      flags = GPD_EVENT_FLAG_EVT_HANDLED;
+  uint32_t      taskTimeoutTicks = 0;//gecko_can_sleep_ticks();
+  EmberGpd_t *  gpdContext;
 
   while (DEF_TRUE) {
     //Command needs to be sent to Gpd stack
     if (flags & GPD_EVENT_FLAG_CMD_WAITING) {
-      //uint32_t header = command_header;
-      // gpd_cmd_handler cmd_handler = command_handler_func;
-      // sli_bt_cmd_handler_delegate(header, cmd_handler, (void*)command_data);
-      gpd_cmd_rtos_delegate();
-      // command_handler_func = NULL;
+
+      //Command received from Application
+      //Handle it here
+
+
+      //Return result
       flags &= ~GPD_EVENT_FLAG_CMD_WAITING;
       OSFlagPost(&gpd_event_flags, (OS_FLAGS)GPD_EVENT_FLAG_RSP_WAITING, OS_OPT_POST_FLAG_SET, &os_err);
     }
 
     //Gpd stack needs updating, and evt can be used
-    if (gecko_event_pending() && (flags & GPD_EVENT_FLAG_EVT_HANDLED)) {  //update bluetooth & read event
-      //gpd_evt = gpd_wait_event();
-      //APP_RTOS_ASSERT_DBG(gpd_evt, 1);
+    if ((flags & GPD_EVENT_FLAG_STACK) ) {  //update bluetooth & read event
+
+      switch (emberGpdGetState())
+      {
+          case EMBER_GPD_APP_STATE_NOT_COMMISSIONED :
+            taskTimeoutTicks = 0;//Falling here we wait for ever
+            break;
+
+          case EMBER_GPD_APP_STATE_CHANNEL_REQUEST :
+          case EMBER_GPD_APP_STATE_CHANNEL_RECEIVED :
+          case EMBER_GPD_APP_STATE_COMMISSIONING_REQUEST :
+          case EMBER_GPD_APP_STATE_COMMISSIONING_REPLY_RECIEVED :
+            taskTimeoutTicks = 900;
+            emberGpdAfPluginCommission(gpdContext);
+            break;
+
+          case EMBER_GPD_APP_STATE_COMMISSIONING_SUCCESS_REQUEST :
+            emberGpdSetState(EMBER_GPD_APP_STATE_OPERATIONAL);
+            //gpd_SignalEvent(GPD_EVENT_COMMISSIONING_OVER);
+            break;
+
+          case EMBER_GPD_APP_STATE_OPERATIONAL :
+            taskTimeoutTicks = 0;//Falling here we wait for ever
+            break;
+          case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_REQUEST :
+          //case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_RECEIVED :
+            taskTimeoutTicks = 0;
+            //sendToggle(gpdContext);
+            emberGpdSetState(EMBER_GPD_APP_STATE_OPERATIONAL);
+            break;
+
+          case EMBER_GPD_APP_STATE_INVALID :
+            emberGpdAfPluginDeCommission(gpdContext);
+            break;
+
+          default:
+            //Wait for next external event
+            break;
+      }
+      emberGpdStoreSecDataToNV(gpdContext);
+
       OSFlagPost(&gpd_event_flags, (OS_FLAGS)GPD_EVENT_FLAG_EVT_WAITING, OS_OPT_POST_FLAG_SET, &os_err);
       flags &= ~(GPD_EVENT_FLAG_EVT_HANDLED);
       // if (wakeupCB != NULL) {
@@ -156,7 +198,6 @@ void GpdTask(void *p)
     // Ask from Bluetooth stack how long we can sleep
     // UINT32_MAX = sleep indefinitely
     // 0 = cannot sleep, stack needs update and we need to check if evt is handled that we can actually update it
-    uint32_t timeout = 0;//gecko_can_sleep_ticks();
     // if (timeout == 0 && (flags & GPD_EVENT_FLAG_EVT_HANDLED)) {
     //   continue;
     // }
@@ -169,7 +210,7 @@ void GpdTask(void *p)
     // }
     flags |= OSFlagPend(&gpd_event_flags,
                         (OS_FLAGS)GPD_EVENT_FLAG_STACK + GPD_EVENT_FLAG_EVT_HANDLED + GPD_EVENT_FLAG_CMD_WAITING,
-                        timeout,
+                        taskTimeoutTicks,
                         OS_OPT_PEND_BLOCKING + OS_OPT_PEND_FLAG_SET_ANY + OS_OPT_PEND_FLAG_CONSUME,
                         NULL,
                         &os_err);
@@ -192,7 +233,6 @@ static  void  GpdLinklayerTask(void *p_arg)
                NULL,
                &os_err);
 
-    //TODO handle RAIL events here (i.e. decoding RX packets, handling RX data and Maintenance frames etc)
     switch (gpd_ll_evt->type) {
       case gpd_ll_event_packet_received:
         emberGpdIncomingMessageHandler(gpd_ll_evt->data.data, gpd_ll_evt->data.dataSize);
@@ -200,7 +240,6 @@ static  void  GpdLinklayerTask(void *p_arg)
       default:
         break;
     }
-
   }
 }
 

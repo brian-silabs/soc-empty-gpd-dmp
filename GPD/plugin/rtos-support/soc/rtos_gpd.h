@@ -69,6 +69,9 @@ void gpd_start(OS_PRIO ll_priority,
                      OS_PRIO stack_priority,
                      gpd_stack_init_func initialize_gpd_stack);
 
+//Used to call GPD apis from any task
+void gpd_cmd_rtos_delegate(void);
+
 // Set the callback for wakeup, Bluetooth task will call this when it has a new event
 // It must only used to wake up application task, for example by posting task semaphore
 //typedef void (*wakeupCallback)();

@@ -470,9 +470,6 @@ int8_t emberGpdProcessCommissioningReply(EmberGpd_t * gpd,
       index += sizeof(uint32_t);
 
       // Unsecured the key
-#ifndef MICRIUM_RTOS
-      //Crypto call one within the ISR context, does not work when using mbedtls in DMP app (Threading-Alt uses mutexes)
-      emberGpdAfPluginDecryptReceivedKey(EmberGpd_t * gpd, uint8_t * newKeyEncrypted, uint8_t * newKeyMic, uint8_t * rxSecCounter);
       if (SUCCESS != emberGpdSecurityDecryptKey(&(gpd->addr),
                                                 newKeyEncrypted,
                                                 newKeyMic,
@@ -480,19 +477,6 @@ int8_t emberGpdProcessCommissioningReply(EmberGpd_t * gpd,
                                                 gpd->securityKey)) {
         return FAILED;
       }
-#else
-      gpd->savedCommissioningReplyKeyMic = *((uint32_t *)newKeyMic);
-      gpd->savedCommissioningReplyRxSecCounter = *((uint32_t *)rxSecCounter);
-      // copy the new key
-	  for (int i = 0; i < EMBER_AF_PLUGIN_APPS_KEY_LENGTH; i++) {
-	    gpd->savedCommissioningReplySecurityKey[i] = newKeyEncrypted[i];
-	  }
-	  gpd->securityKeyType = securityKeyType;
-	  gpd->securityLevel = securityLevel;
-
-      emberGpdSetState(EMBER_GPD_APP_STATE_COMMISSIONING_REPLY_RECIEVED_DECRYPT_KEY);
-      return FAILED;
-#endif
 #endif
     } else {
       // copy the new key
@@ -505,8 +489,7 @@ int8_t emberGpdProcessCommissioningReply(EmberGpd_t * gpd,
   }
   gpd->securityKeyType = securityKeyType;
   gpd->securityLevel = securityLevel;
-  if(gpd->gpdState != EMBER_GPD_APP_STATE_COMMISSIONING_REPLY_RECIEVED_DECRYPT_KEY)
-	  emberGpdMbedtlsCcmSetkeyWraper(gpd->securityKey);
+	emberGpdMbedtlsCcmSetkeyWraper(gpd->securityKey);
   return SUCCESS;
 }
 
@@ -554,22 +537,3 @@ void emberGpdAfPluginCommission(EmberGpd_t * gpd)
 #endif
 }
 
-#ifdef MICRIUM_RTOS
-int8_t emberGpdAfPluginDecryptReceivedKey(EmberGpd_t * gpd)
-{
-
-  // Unsecured the key
-  if (SUCCESS != emberGpdSecurityDecryptKey(&(gpd->addr),
-		  	  	  	  	  	  	  	  	  	  gpd->savedCommissioningReplySecurityKey,
-											  (uint8_t *)&(gpd->savedCommissioningReplyKeyMic),
-											  (uint8_t *)&(gpd->savedCommissioningReplyRxSecCounter),
-											  gpd->securityKey)) {
-	emberGpdSetState(EMBER_GPD_APP_STATE_CHANNEL_RECEIVED);
-	return FAILED;
-  }
-  emberGpdMbedtlsCcmSetkeyWraper(gpd->securityKey);
-  emberGpdSetState(EMBER_GPD_APP_STATE_COMMISSIONING_REPLY_RECIEVED);
-
-  return SUCCESS;
-}
-#endif

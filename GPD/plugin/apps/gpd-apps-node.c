@@ -78,9 +78,17 @@ void emberGpdSetChannel(uint8_t channel)
   gpdNode.channel = channel;
 }
 
+uint8_t emberGpdGetState(void)
+{
+  return gpdNode.gpdState;
+}
+
 void emberGpdSetState(uint8_t gpdState)
 {
   gpdNode.gpdState = gpdState;
+#ifdef MICRIUM_RTOS
+  GpdUpdate();
+#endif
 }
 
 EmberGpdAddr_t * emberGpdGetAddr(void)

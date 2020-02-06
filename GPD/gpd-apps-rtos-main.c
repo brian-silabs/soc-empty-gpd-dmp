@@ -41,7 +41,6 @@
 
 
 static uint8_t  gpd_Command     (OS_FLAGS flags);
-static void     gpd_SignalEvent (gpdEvent_t event);
 
 static void     sendToggle      (EmberGpd_t * gpd);
 
@@ -50,31 +49,13 @@ static void debug_init(void);
 #endif
 
 static EmberGpd_t * gpdContext;
+///////////////////////////////////////////////////////////////////////////////
+/////////////////////////// Public API definition /////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
-/**************************************************************************//**
- * Proprietary Application task.
- *
- * @param p_arg Pointer to an optional data area which can pass parameters to
- *              the task when the task executes.
- *
- * This is a minimal Proprietary Application task that only configures the
- * radio.
- *****************************************************************************/
-void greenPowerAppTask(void *p_arg)
+int8_t GPD_Init(void)
 {
-  PP_UNUSED_PARAM(p_arg);
-  RTOS_ERR err;
-
-  volatile OS_TICK taskTimeoutTicks = 0;
-
-  OSFlagPend(&proprietary_event_flags,
-               INIT_FLAG,
-               (OS_TICK)0,
-               OS_OPT_PEND_BLOCKING       \
-               + OS_OPT_PEND_FLAG_SET_ANY \
-               + OS_OPT_PEND_FLAG_CONSUME,
-               NULL,
-               &err);
+  int8_t error = 0;
 
   // Initialise NV
   emberGpdNvInit();//TODO as we are relying on the BLE stack NVM, need to make sure it was init first
@@ -90,88 +71,8 @@ void greenPowerAppTask(void *p_arg)
 
 #ifdef DEBUG_RADIO
   debug_init();
-#endif 
-
-  gpd_SignalEvent(GPD_EVENT_INIT_OVER);
-
-  while (DEF_TRUE) {
-    // Wait for the dummy flag. Use this flag to stop waiting with the execution of your code.
-    // Call user to implement rest of the thing
-    OSFlagPend(&proprietary_event_flags,
-                COMMISSIONING_FLAG |
-                DECOMMISSIONING_FLAG |
-                OPERATE_FLAG,
-                (OS_TICK)taskTimeoutTicks,
-                OS_OPT_PEND_BLOCKING       \
-                + OS_OPT_PEND_FLAG_SET_ANY \
-                + OS_OPT_PEND_FLAG_CONSUME,
-                NULL,
-                &err);
-
-    switch (gpdContext->gpdState)
-    {
-        case EMBER_GPD_APP_STATE_NOT_COMMISSIONED :
-          taskTimeoutTicks = 0;//Falling here we wait for ever
-          break;
-
-        case EMBER_GPD_APP_STATE_CHANNEL_REQUEST :
-        case EMBER_GPD_APP_STATE_CHANNEL_RECEIVED :
-        case EMBER_GPD_APP_STATE_COMMISSIONING_REQUEST :
-    	  case EMBER_GPD_APP_STATE_COMMISSIONING_REPLY_RECIEVED :
-          taskTimeoutTicks = 900;
-          emberGpdAfPluginCommission(gpdContext);
-          break;
-    	  case EMBER_GPD_APP_STATE_COMMISSIONING_SUCCESS_REQUEST :
-          emberGpdSetState(EMBER_GPD_APP_STATE_OPERATIONAL);
-          gpd_SignalEvent(GPD_EVENT_COMMISSIONING_OVER);
-          break;
-
-#ifdef MICRIUM_RTOS
-        case EMBER_GPD_APP_STATE_COMMISSIONING_REPLY_RECIEVED_DECRYPT_KEY:
-        	taskTimeoutTicks = 900;
-          emberGpdAfPluginDecryptReceivedKey(gpdContext);
-        	break;
 #endif
-
-        case EMBER_GPD_APP_STATE_OPERATIONAL :
-          taskTimeoutTicks = 0;//Falling here we wait for ever
-        	break;
-        case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_REQUEST :
-        //case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_RECEIVED :
-          taskTimeoutTicks = 0;
-          sendToggle(gpdContext);
-          emberGpdSetState(EMBER_GPD_APP_STATE_OPERATIONAL);
-          break;
-
-        case EMBER_GPD_APP_STATE_INVALID :
-          emberGpdAfPluginDeCommission(gpdContext);
-          break;
-
-        default:
-          //Wait for next external event
-          break;
-    }
-    emberGpdStoreSecDataToNV(gpdContext);
-    //TODO handle flag post timeout "error" here too
-    //APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(err) == RTOS_ERR_NONE), 1);
-
-  }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-/////////////////////////// Public API definition /////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-
-int8_t GPD_Init(void)
-{
-  int8_t error = 0;
-  error = gpd_Command(INIT_FLAG);
   return error;
-}
-
-uint8_t GPD_GetGpdState(void)
-{
-	return (uint8_t)(gpdContext->gpdState);
 }
 
 int8_t GPD_StartCommissioning(void)
@@ -216,22 +117,22 @@ int8_t GPD_Toggle(void)
 /////////////////////////// Private API definition /////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-static uint8_t gpd_Command(OS_FLAGS flags)
-{
-	RTOS_ERR osErr;
-  //Enables the GPD commissioning process
-  OSFlagPost(&proprietary_event_flags,
-        (OS_FLAGS)flags,
-        OS_OPT_POST_FLAG_SET,
-        &osErr);
-
-  return 0;
-}
-
-static void gpd_SignalEvent(gpdEvent_t event)
-{
-  gecko_external_signal(event);
-}
+//static uint8_t gpd_Command(OS_FLAGS flags)
+//{
+//	RTOS_ERR osErr;
+//  //Enables the GPD commissioning process
+//  OSFlagPost(&proprietary_event_flags,
+//        (OS_FLAGS)flags,
+//        OS_OPT_POST_FLAG_SET,
+//        &osErr);
+//
+//  return 0;
+//}
+//
+//static void gpd_SignalEvent(gpdEvent_t event)
+//{
+//  gecko_external_signal(event);
+//}
 
 ///////////////////////////////////////////////////////////////////////////////
 /////////////////////////// Private API definition /////////////////////////////
