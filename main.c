@@ -69,7 +69,7 @@
 #include "mbedtls/threading.h"
 
 //This file includes shared code between BLE and GP
-//#include "gpd-apps-rtos-main.h"
+#include "gpd-apps-rtos-main.h"
 
 // Ex Main Start task
 #define EX_MAIN_START_TASK_PRIO           21u
@@ -99,6 +99,8 @@ static CPU_STK gpdAppTaskStk[GPD_APP_TASK_STACK_SIZE];
 static OS_TCB  gpdAppTaskTCB;
 static void    gpdAppTask(void *p_arg);
 
+
+static uint8_t initialize_gpd(void);
 
 // Timer Task Configuration
 #if (OS_CFG_TMR_EN == DEF_ENABLED)
@@ -389,9 +391,9 @@ static void bluetoothAppTask(void *p_arg)
         pRspAdvT = gecko_cmd_le_gap_set_advertise_timing(0, 160, 160, 0, 0);
         APP_ASSERT_DBG((pRspAdvT->result == bg_err_success), pRspAdvT->result);
         // Start general advertising and enable connections.
-//        pRspAdv = gecko_cmd_le_gap_start_advertising(0,
-//                                                     le_gap_general_discoverable,
-//                                                     le_gap_connectable_scannable);
+        pRspAdv = gecko_cmd_le_gap_start_advertising(0,
+                                                     le_gap_general_discoverable,
+                                                     le_gap_connectable_scannable);
         APP_ASSERT_DBG((pRspAdv->result == bg_err_success), pRspAdv->result);
         break;
 
@@ -416,7 +418,7 @@ static void bluetoothAppTask(void *p_arg)
       case gecko_evt_gatt_server_user_write_request_id:
         if (bluetooth_evt->data.evt_gatt_server_user_write_request.characteristic == gattdb_gpd_commissioning) {
          //Enables the GPD commissioning process
-         //GPD_StartCommissioning();
+         GPD_StartCommissioning();
          //APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
           // Send response to Write Request.
           pRspWrRsp = gecko_cmd_gatt_server_send_user_write_response(
@@ -515,7 +517,7 @@ static void bluetoothAppTask(void *p_arg)
  * All bluetooth specific initialization code should be here like gecko_init(),
  * gecko_init_whitelisting(), gecko_init_multiprotocol() and so on.
  ******************************************************************************/
-static uint8_t initialize_gpd()
+static uint8_t initialize_gpd(void)
 {
   uint8_t err = GPD_Init();
   APP_RTOS_ASSERT_DBG((err == 0), 1);
@@ -538,10 +540,10 @@ static void gpdAppTask(void *p_arg)
   RTOS_ERR osErr;
   uint8_t initErr;
 
-  // Create Bluetooth Link Layer and stack tasks
+  // Create GPD Link Layer and stack tasks
   gpd_start(APP_CFG_TASK_GPD_LL_PRIO,
-                  APP_CFG_TASK_GPD_STACK_PRIO,
-                  initialize_gpd);
+            APP_CFG_TASK_GPD_STACK_PRIO,
+            initialize_gpd);
 
   while (DEF_TRUE) {
     OSFlagPend(&gpd_event_flags,

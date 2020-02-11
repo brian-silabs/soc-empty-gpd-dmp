@@ -83,8 +83,9 @@ int8_t GPD_StartCommissioning(void)
     //Error device already in commissioning process or commissioned
     error = (-1);
   } else {
+
     emberGpdSetState(EMBER_GPD_APP_STATE_CHANNEL_REQUEST);
-    error = gpd_Command(COMMISSIONING_FLAG);
+    //error = gpd_Command(COMMISSIONING_FLAG);
   }
   
   return error;

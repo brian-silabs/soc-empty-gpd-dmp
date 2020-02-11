@@ -148,7 +148,7 @@ void GpdTask(void *p)
 
     //Gpd stack needs updating, and evt can be used
     if ((flags & GPD_EVENT_FLAG_STACK) ) {  //update bluetooth & read event
-
+      gpdContext = emberGpdGetGpd();
       switch (emberGpdGetState())
       {
           case EMBER_GPD_APP_STATE_NOT_COMMISSIONED :

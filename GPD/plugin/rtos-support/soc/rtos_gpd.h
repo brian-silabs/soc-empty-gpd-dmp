@@ -41,7 +41,7 @@ typedef enum gpd_ll_event_type {
 
 typedef struct gpd_ll_event_data
 {
-    uint32_t dataSize;
+    uint16_t dataSize;
     uint8_t *data;
 } gpd_ll_event_data_t;
 
