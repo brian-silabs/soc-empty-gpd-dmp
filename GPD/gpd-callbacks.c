@@ -18,9 +18,9 @@
 
 #include "gpd-components-common.h"
 
-#include "gpd-apps-rtos-main.h"
-#include "rtos_gecko.h"
-
+#ifdef BLE_DMP_SUPPORT
+#include "ble-dmp-support.h"
+#endif
 
 // ----------- GPD application Callbacks --------------------------------------
 // This implements the following

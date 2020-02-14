@@ -69,7 +69,6 @@
 #include "mbedtls/threading.h"
 
 //This file includes shared code between BLE and GP
-#include "gpd-apps-rtos-main.h"
 
 // Ex Main Start task
 #define EX_MAIN_START_TASK_PRIO           21u

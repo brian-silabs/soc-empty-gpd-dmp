@@ -15,7 +15,7 @@
  *
  ******************************************************************************/
 #include "gpd-components-common.h"
-#ifdef MICRIUM_RTOS
+#ifdef BLE_DMP_SUPPORT
 #include "rtos_gpd.h"
 #endif
 
@@ -23,31 +23,37 @@
 static void RAILCb_Generic(RAIL_Handle_t railHandle, RAIL_Events_t events);
 
 static RAIL_Handle_t railHandle = NULL;
-static RAILSched_Config_t railSchedState;
-static bool     rfReady = false;
-static RAIL_Config_t railCfg = {
-  .eventsCallback = &RAILCb_Generic,
-  .protocol = NULL,
-  .scheduler = &railSchedState
-};
 
+#ifdef BLE_DMP_SUPPORT
+static RAILSched_Config_t railSchedState;
 static RAIL_SchedulerInfo_t rxSchedInfo = 
 {
   .priority = 0,
   .slipTime = 0,
   .transactionTime = EMBER_AF_PLUGIN_APPS_RX_WINDOW * 1000
 };
-  
+
 static RAIL_SchedulerInfo_t txSchedInfo = 
 {
   .priority = 0,
   .slipTime = 10000,
   .transactionTime = 2000
 };
+#endif
+
+static bool     rfReady = false;
+static RAIL_Config_t railCfg = {
+  .eventsCallback = &RAILCb_Generic,
+  .protocol = NULL,
+#ifdef BLE_DMP_SUPPORT
+  .scheduler = &railSchedState
+#endif
+};
 
 static uint8_t railTxFifo[GP_FIFO_SIZE];
 static uint8_t railRxFifo[GP_FIFO_SIZE];
 
+//TODO make it kernel aware
 static void RAILCb_Generic(RAIL_Handle_t railHandle, RAIL_Events_t events)
 {
   (void)railHandle;
@@ -66,15 +72,21 @@ static void RAILCb_Generic(RAIL_Handle_t railHandle, RAIL_Events_t events)
     emberGpdIncomingMessageHandler(emberGpdGetRxMpdu(), rxReceived);
 #endif
     CORE_ExitCritical(c);
+#ifdef BLE_DMP_SUPPORT
     RAIL_YieldRadio(railHandle);
+#endif
   }
   if (events & RAIL_EVENT_TX_PACKET_SENT) {
-	  RAIL_YieldRadio(railHandle);
+#ifdef BLE_DMP_SUPPORT
+    RAIL_YieldRadio(railHandle);
+#endif
   }
+#ifdef BLE_DMP_SUPPORT
   if (events & RAIL_EVENT_SCHEDULER_STATUS)
   {
 
   }
+#endif
 }
 
 static void RAIL_CbRfReady(RAIL_Handle_t railHandle)
@@ -161,7 +173,7 @@ void emberGpdRadioInit(void)
     while (true) ;
   }
 
-#ifndef MICRIUM_RTOS
+#ifndef BLE_DMP_SUPPORT
   //In multiprotocol, RAIL currently shares one receive FIFO across all protocols. This function will return RAIL_STATUS_INVALID_STATE if the requested RAIL_Handle_t is not active.
   // Set RX FIFO, and verify that the size is correct
   RAIL_Status_t status = RAIL_SetRxFifo(railHandle, railRxFifo, &fifoSize);
