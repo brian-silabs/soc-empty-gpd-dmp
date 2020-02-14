@@ -26,7 +26,7 @@
 
 void GpdUpdate();
 //volatile struct gpd_cmd_packet*  gpd_evt;
-volatile gpd_ll_event_t *gpd_ll_evt;
+volatile gpd_ll_event_t gpd_ll_evt;
 
 OS_MUTEX           GpdMutex;
 
@@ -233,9 +233,9 @@ static  void  GpdLinklayerTask(void *p_arg)
                NULL,
                &os_err);
 
-    switch (gpd_ll_evt->type) {
+    switch (gpd_ll_evt.type) {
       case gpd_ll_event_packet_received:
-        emberGpdIncomingMessageHandler(gpd_ll_evt->data.data, gpd_ll_evt->data.dataSize);
+        emberGpdIncomingMessageHandler(gpd_ll_evt.data.data, gpd_ll_evt.data.dataSize);
         break;
       default:
         break;

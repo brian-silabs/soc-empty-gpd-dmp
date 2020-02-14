@@ -51,7 +51,7 @@ typedef struct
     gpd_ll_event_data_t data;
 } gpd_ll_event_t;
 
-extern volatile gpd_ll_event_t *gpd_ll_evt;
+extern volatile gpd_ll_event_t gpd_ll_evt;
 
 // Function prototype for initializing GPD stack.
 typedef uint8_t(*gpd_stack_init_func)();
