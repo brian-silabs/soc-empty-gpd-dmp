@@ -35,15 +35,6 @@ uint16_t gpd_cmd_decommission(void)
   return global_gpd_rsp.result;
 }
 
-uint16_t gpd_cmd_init(void)
-{
-
-  global_gpd_cmd.id = gpd_cmd_id_init;
-
-  gpd_cmd_rtos_delegate();
-  return global_gpd_rsp.result;
-}
-
 uint16_t gpd_cmd_send(uint8_t *data, uint16_t dataSize)
 {
 

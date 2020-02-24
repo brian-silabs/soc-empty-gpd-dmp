@@ -20,8 +20,7 @@
 #include <stdint.h>
 
 typedef enum gpd_cmd_id_t {
-  gpd_cmd_id_init = 0,
-  gpd_cmd_id_commission,
+  gpd_cmd_id_commission = 0,
   gpd_cmd_id_decommission,
   gpd_cmd_id_send
 
@@ -29,7 +28,6 @@ typedef enum gpd_cmd_id_t {
 
 uint16_t gpd_cmd_commission(void);
 uint16_t gpd_cmd_decommission(void);
-uint16_t gpd_cmd_init(void);
 uint16_t gpd_cmd_send(uint8_t *data, uint16_t dataSize);
 
 #endif //GPD_EVENTS_H

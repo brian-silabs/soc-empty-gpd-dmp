@@ -114,4 +114,6 @@ void GpdLLCallback();
 void GpdPend(RTOS_ERR *err);
 void GpdPost(RTOS_ERR *err);
 
+uint16_t gpd_init(void);
+
 #endif //RTOS_GPD_H

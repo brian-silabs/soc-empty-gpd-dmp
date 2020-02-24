@@ -520,7 +520,7 @@ static void bluetoothAppTask(void *p_arg)
  ******************************************************************************/
 static uint8_t initialize_gpd(void)
 {
-  uint16_t err = gpd_cmd_init();
+  uint16_t err = gpd_init();
   APP_RTOS_ASSERT_DBG((err == 0), 1);
   return err;
 }

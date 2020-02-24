@@ -150,19 +150,6 @@ void GpdTask(void *p)
       //Command received from Application
       //Handle it here
       switch (global_gpd_cmd.id) {
-        case gpd_cmd_id_init:
-          // Initialise NV
-          emberGpdNvInit();//TODO as we are relying on the BLE stack NVM, need to make sure it was init first
-          // Initialise timer for rxOffset timing during rxAfterTx
-          emberGpdLeTimerInit();
-          // Initialise Radio
-          emberGpdRadioInit();
-          //Initialise the Gpd
-          gpdContext = emberGpdInit();
-#ifdef DEBUG_RADIO
-          debug_init();
-#endif
-          break;
         case gpd_cmd_id_commission:
           emberGpdSetState(EMBER_GPD_APP_STATE_CHANNEL_REQUEST);
           break;
@@ -303,6 +290,23 @@ void GpdPost(RTOS_ERR *err)
   OSMutexPost((OS_MUTEX *)&GpdMutex,
               (OS_OPT    )OS_OPT_POST_NONE,
               (RTOS_ERR *)err);
+}
+
+
+uint16_t gpd_init(void)
+{
+  // Initialise NV
+  emberGpdNvInit();//TODO as we are relying on the BLE stack NVM, need to make sure it was init first
+  // Initialise timer for rxOffset timing during rxAfterTx
+  emberGpdLeTimerInit();
+  // Initialise Radio
+  emberGpdRadioInit();
+  //Initialise the Gpd
+  EmberGpd_t *  gpdContext = emberGpdInit();
+#ifdef DEBUG_RADIO
+  debug_init();
+#endif
+  return 0;
 }
 
 #ifdef DEBUG_RADIO
