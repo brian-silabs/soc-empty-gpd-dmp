@@ -428,15 +428,11 @@ static void bluetoothAppTask(void *p_arg)
             bg_err_success);
           APP_ASSERT_DBG((pRspWrRsp->result == bg_err_success), pRspWrRsp->result);
 
-          //TODO change RF priorities so that GPDFs remain clear of any BLE activity
-          // Close connection to enter to GPD Commissioning.
-          // pRspConnCl = gecko_cmd_le_connection_close(bluetooth_evt->data.evt_gatt_server_user_write_request.connection);
-          // APP_ASSERT_DBG((pRspConnCl->result == bg_err_success), pRspConnCl->result);
         }
 
         if (bluetooth_evt->data.evt_gatt_server_user_write_request.characteristic == gattdb_gpd_decommissioning) {
          //Enables the GPD commissioning process
-         //GPD_DeCommission();
+          //gpdResult = gpd_cmd_decommission();
          //APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
           // Send response to Write Request.
            pRspWrRsp = gecko_cmd_gatt_server_send_user_write_response(
@@ -448,7 +444,8 @@ static void bluetoothAppTask(void *p_arg)
 
         if (bluetooth_evt->data.evt_gatt_server_user_write_request.characteristic == gattdb_gpd_toggle) {
          //Enables the GPD commissioning process
-         //GPD_Toggle();
+
+          gpdResult = gpd_cmd_send(NULL,0);//Send a GP Toggle, generic implementation to be done
          //APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
           // Send response to Write Request.
            pRspWrRsp = gecko_cmd_gatt_server_send_user_write_response(
@@ -476,24 +473,6 @@ static void bluetoothAppTask(void *p_arg)
           APP_ASSERT_DBG((pRspConnCl->result == bg_err_success), pRspConnCl->result);
         }
         break;
-
-//      case gecko_evt_system_external_signal_id:
-//        if(bluetooth_evt->data.evt_system_external_signal.extsignals == GPD_EVENT_INIT_OVER)
-//        {
-//
-//        }
-//        if (bluetooth_evt->data.evt_system_external_signal.extsignals == GPD_EVENT_COMMISSIONING_OVER)
-//        {
-//           pRspAdv = gecko_cmd_le_gap_start_advertising( 0,
-//                                                         le_gap_general_discoverable,
-//                                                         le_gap_connectable_scannable);
-//           APP_ASSERT_DBG((pRspAdv->result == bg_err_success), pRspAdv->result);
-//        }
-//        if (bluetooth_evt->data.evt_system_external_signal.extsignals == GPD_EVENT_DECOMMISSIONING_OVER)
-//        {
-//
-//        }
-//        break;
 
       default:
         break;
@@ -559,8 +538,8 @@ static void gpdAppTask(void *p_arg)
 
      switch (global_gpd_evt.id)
      {
-     case gpd_evt_id_init_done:
-       /* code */
+     case gpd_evt_id_commissioned:
+       GPIO_PinModeSet(gpioPortF, 4, gpioModePushPull, 1);//LED 0
        break;
     
      default:

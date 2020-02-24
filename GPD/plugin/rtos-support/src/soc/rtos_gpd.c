@@ -69,6 +69,8 @@ static  CPU_STK           GpdLinklayerTaskStk[GPD_LINKLAYER_STACK_SIZE];
 #ifdef DEBUG_RADIO
 static void debug_init(void);
 #endif
+static void sendToggle(EmberGpd_t * gpd);
+
 
 OS_FLAG_GRP gpd_event_flags;
 
@@ -153,6 +155,10 @@ void GpdTask(void *p)
         case gpd_cmd_id_commission:
           emberGpdSetState(EMBER_GPD_APP_STATE_CHANNEL_REQUEST);
           break;
+        case gpd_cmd_id_send:
+          emberGpdSetState(EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_REQUEST);
+          break;
+
         default:
           break;
       }
@@ -183,7 +189,7 @@ void GpdTask(void *p)
             break;
 
           case EMBER_GPD_APP_STATE_COMMISSIONING_SUCCESS_REQUEST :
-            global_gpd_evt.id = gpd_evt_id_init_done;
+            global_gpd_evt.id = gpd_evt_id_commissioned;
             global_gpd_evt.result = 0x00;
             emberGpdSetState(EMBER_GPD_APP_STATE_OPERATIONAL);
             break;
@@ -193,10 +199,11 @@ void GpdTask(void *p)
             break;
           case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_REQUEST :
             taskTimeoutTicks = 0;
-            //sendToggle(gpdContext);
+            sendToggle(gpdContext);
             emberGpdSetState(EMBER_GPD_APP_STATE_OPERATIONAL);
             break;
-          //case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_RECEIVED :
+          case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_RECEIVED :
+            break;
           case EMBER_GPD_APP_STATE_INVALID :
             emberGpdAfPluginDeCommission(gpdContext);
             break;
@@ -307,6 +314,16 @@ uint16_t gpd_init(void)
   debug_init();
 #endif
   return 0;
+}
+
+static void sendToggle(EmberGpd_t * gpd)
+{
+  uint8_t command[] = { GP_CMD_TOGGLE };
+  emberAfGpdfSend(EMBER_GPD_NWK_FC_FRAME_TYPE_DATA,
+                  gpd,
+                  command,
+                  sizeof(command),
+                  EMBER_AF_PLUGIN_APPS_CMD_RESEND_NUMBER);
 }
 
 #ifdef DEBUG_RADIO
