@@ -24,15 +24,20 @@
 #include "gpd-components-common.h"
 #include <rtos_utils.h>
 
+#ifdef DEBUG_RADIO
+#include "em_prs.h"
+#include "em_gpio.h"
+#endif
+
 void GpdUpdate();
-//volatile struct gpd_cmd_packet*  gpd_evt;
-volatile gpd_ll_event_t gpd_ll_evt;
+
+volatile gpd_cmd_t global_gpd_cmd;
+volatile gpd_rsp_t global_gpd_rsp;
+volatile gpd_evt_t global_gpd_evt;
+
+volatile gpd_ll_event_t gpd_ll_evt;//Holds Radio -> Stack data
 
 OS_MUTEX           GpdMutex;
-
-//volatile static uint32_t command_header;
-//volatile static void*    command_data;
-//volatile static gpd_cmd_handler command_handler_func = NULL;
 
 //Gpd task
 #ifndef GPD_STACK_SIZE
@@ -60,6 +65,11 @@ static  CPU_STK           GpdLinklayerTaskStk[GPD_LINKLAYER_STACK_SIZE];
 // {
 //   wakeupCB = (volatile wakeupCallback)cb;
 // }
+
+#ifdef DEBUG_RADIO
+static void debug_init(void);
+#endif
+
 OS_FLAG_GRP gpd_event_flags;
 
 void gpd_start(OS_PRIO ll_priority,
@@ -125,6 +135,7 @@ void GpdUpdate()
   RTOS_ERR os_err;
   OSFlagPost(&gpd_event_flags, (OS_FLAGS)GPD_EVENT_FLAG_STACK, OS_OPT_POST_FLAG_SET, &os_err);
 }
+
 //Gpd task, it waits for events from gpd and handles them
 void GpdTask(void *p)
 {
@@ -136,12 +147,33 @@ void GpdTask(void *p)
   while (DEF_TRUE) {
     //Command needs to be sent to Gpd stack
     if (flags & GPD_EVENT_FLAG_CMD_WAITING) {
-
       //Command received from Application
       //Handle it here
-
+      switch (global_gpd_cmd.id) {
+        case gpd_cmd_id_init:
+          // Initialise NV
+          emberGpdNvInit();//TODO as we are relying on the BLE stack NVM, need to make sure it was init first
+          // Initialise timer for rxOffset timing during rxAfterTx
+          emberGpdLeTimerInit();
+          // Initialise Radio
+          emberGpdRadioInit();
+          //Initialise the Gpd
+          gpdContext = emberGpdInit();
+#ifdef DEBUG_RADIO
+          debug_init();
+#endif
+          break;
+        case gpd_cmd_id_commission:
+          emberGpdSetState(EMBER_GPD_APP_STATE_CHANNEL_REQUEST);
+          break;
+        default:
+          break;
+      }
 
       //Return result
+      global_gpd_rsp.id = global_gpd_cmd.id;
+      global_gpd_rsp.result = 0;
+
       flags &= ~GPD_EVENT_FLAG_CMD_WAITING;
       OSFlagPost(&gpd_event_flags, (OS_FLAGS)GPD_EVENT_FLAG_RSP_WAITING, OS_OPT_POST_FLAG_SET, &os_err);
     }
@@ -164,20 +196,20 @@ void GpdTask(void *p)
             break;
 
           case EMBER_GPD_APP_STATE_COMMISSIONING_SUCCESS_REQUEST :
+            global_gpd_evt.id = gpd_evt_id_init_done;
+            global_gpd_evt.result = 0x00;
             emberGpdSetState(EMBER_GPD_APP_STATE_OPERATIONAL);
-            //gpd_SignalEvent(GPD_EVENT_COMMISSIONING_OVER);
             break;
 
           case EMBER_GPD_APP_STATE_OPERATIONAL :
             taskTimeoutTicks = 0;//Falling here we wait for ever
             break;
           case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_REQUEST :
-          //case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_RECEIVED :
             taskTimeoutTicks = 0;
             //sendToggle(gpdContext);
             emberGpdSetState(EMBER_GPD_APP_STATE_OPERATIONAL);
             break;
-
+          //case EMBER_GPD_APP_STATE_OPERATIONAL_COMMAND_RECEIVED :
           case EMBER_GPD_APP_STATE_INVALID :
             emberGpdAfPluginDeCommission(gpdContext);
             break;
@@ -249,10 +281,6 @@ void gpd_cmd_rtos_delegate(void)
 {
   RTOS_ERR os_err;
 
-//   command_header = header;
-//   command_handler_func = handler;
-//   command_data = (void*)payload;
-  //Command structure is filled, notify the stack
   OSFlagPost(&gpd_event_flags, (OS_FLAGS)GPD_EVENT_FLAG_CMD_WAITING, OS_OPT_POST_FLAG_SET, &os_err);
   //wait for response
   OSFlagPend(&gpd_event_flags, (OS_FLAGS)GPD_EVENT_FLAG_RSP_WAITING,
@@ -276,3 +304,29 @@ void GpdPost(RTOS_ERR *err)
               (OS_OPT    )OS_OPT_POST_NONE,
               (RTOS_ERR *)err);
 }
+
+#ifdef DEBUG_RADIO
+static void debug_init(void)
+{
+  // Turn on the PRS and GPIO clocks so we can access their registers
+  CMU_ClockEnable(cmuClock_PRS, true);
+  CMU_ClockEnable(cmuClock_GPIO, true);
+
+  GPIO_PinModeSet(gpioPortC, 10, gpioModePushPull, 0);
+  GPIO_PinModeSet(gpioPortC, 11, gpioModePushPull, 0);
+
+  PRS_SourceSignalSet(9, PRS_RAC_RX & 0xFF00,
+                          ((PRS_RAC_RX & _PRS_CH_CTRL_SIGSEL_MASK) >> _PRS_CH_CTRL_SIGSEL_SHIFT),
+                                prsEdgeOff);
+  PRS_SourceSignalSet(10,
+                      (PRS_RAC_TX & 0xFF00),
+                      ((PRS_RAC_TX & _PRS_CH_CTRL_SIGSEL_MASK) >> _PRS_CH_CTRL_SIGSEL_SHIFT),
+                      prsEdgeOff);
+
+  PRS->ROUTELOC2 &= ~_PRS_ROUTELOC2_CH9LOC_MASK;
+  PRS->ROUTELOC2 |= PRS_ROUTELOC2_CH9LOC_LOC15;
+  PRS->ROUTELOC2 &= ~_PRS_ROUTELOC2_CH10LOC_MASK;
+  PRS->ROUTELOC2 |= PRS_ROUTELOC2_CH10LOC_LOC5;
+  PRS->ROUTEPEN |= (PRS_ROUTEPEN_CH9PEN | PRS_ROUTEPEN_CH10PEN);
+}
+#endif

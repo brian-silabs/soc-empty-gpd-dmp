@@ -352,6 +352,8 @@ static void bluetoothAppTask(void *p_arg)
   PP_UNUSED_PARAM(p_arg);
   RTOS_ERR osErr;
   errorcode_t initErr;
+  uint16_t gpdResult;
+
   struct gecko_msg_le_gap_start_advertising_rsp_t* pRspAdv;
   struct gecko_msg_le_gap_set_advertise_timing_rsp_t* pRspAdvT;
   struct gecko_msg_gatt_server_send_user_write_response_rsp_t* pRspWrRsp;
@@ -417,7 +419,7 @@ static void bluetoothAppTask(void *p_arg)
       case gecko_evt_gatt_server_user_write_request_id:
         if (bluetooth_evt->data.evt_gatt_server_user_write_request.characteristic == gattdb_gpd_commissioning) {
          //Enables the GPD commissioning process
-         GPD_StartCommissioning();
+         gpdResult = gpd_cmd_commission();
          //APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
           // Send response to Write Request.
           pRspWrRsp = gecko_cmd_gatt_server_send_user_write_response(
@@ -518,7 +520,7 @@ static void bluetoothAppTask(void *p_arg)
  ******************************************************************************/
 static uint8_t initialize_gpd(void)
 {
-  uint8_t err = GPD_Init();
+  uint16_t err = gpd_cmd_init();
   APP_RTOS_ASSERT_DBG((err == 0), 1);
   return err;
 }
@@ -555,15 +557,15 @@ static void gpdAppTask(void *p_arg)
                &osErr);
     APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
 
-    // switch (0)
-    // {
-    // case /* constant-expression */:
-    //   /* code */
-    //   break;
+     switch (global_gpd_evt.id)
+     {
+     case gpd_evt_id_init_done:
+       /* code */
+       break;
     
-    // default:
-    //   break;
-    // }
+     default:
+       break;
+     }
 
     OSFlagPost(&gpd_event_flags,
                (OS_FLAGS)GPD_EVENT_FLAG_EVT_HANDLED,
