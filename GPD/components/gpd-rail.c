@@ -15,8 +15,11 @@
  *
  ******************************************************************************/
 #include "gpd-components-common.h"
-#ifdef BLE_DMP_SUPPORT
+
+#ifdef MICRIUM_RTOS
 #include "rtos_gpd.h"
+#include "os.h"
+#include "em_core.h"
 #endif
 
 // Function prototype
@@ -51,12 +54,19 @@ static RAIL_Config_t railCfg = {
 };
 
 static uint8_t railTxFifo[GP_FIFO_SIZE];
+#ifndef BLE_DMP_SUPPORT
 static uint8_t railRxFifo[GP_FIFO_SIZE];
+#endif
 
-//TODO make it kernel aware
 static void RAILCb_Generic(RAIL_Handle_t railHandle, RAIL_Events_t events)
 {
   (void)railHandle;
+
+#ifdef MICRIUM_RTOS
+  CORE_irqState_t irqState = CORE_EnterCritical();
+  OSIntEnter();
+  CORE_ExitCritical(irqState);
+#endif
 
   if (events & RAIL_EVENT_RX_PACKET_RECEIVED) {
     CORE_irqState_t c = CORE_EnterCritical();
@@ -87,6 +97,11 @@ static void RAILCb_Generic(RAIL_Handle_t railHandle, RAIL_Events_t events)
 
   }
 #endif
+
+#ifdef MICRIUM_RTOS
+OSIntExit();
+#endif
+
 }
 
 static void RAIL_CbRfReady(RAIL_Handle_t railHandle)
