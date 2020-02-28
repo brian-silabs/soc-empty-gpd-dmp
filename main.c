@@ -535,7 +535,7 @@ static void gpdAppTask(void *p_arg)
                NULL,
                &osErr);
     APP_RTOS_ASSERT_DBG((RTOS_ERR_CODE_GET(osErr) == RTOS_ERR_NONE), 1);
-
+      //TODO Cleanup this evt.id at some point
      switch (global_gpd_evt.id)
      {
      case gpd_evt_id_commissioned:

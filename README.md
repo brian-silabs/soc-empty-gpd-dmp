@@ -19,6 +19,10 @@ Gecko SDK Suite 2.7.0
     * Commission command
     * Toggle command
     * Decommission command
+  7. Cleaned up all architecture
+    * Made RTOS support as a plugin
+    * Made BLE DMP integration as a Plugin
+    * Built up an API to call GPD commands from everywhere
 
 ## Operation
 The device starts advertising in discoverable and connectable mode
@@ -27,6 +31,9 @@ Then write the GPD Toggle characteristic to send a Green Power Toggle to the Com
 
 ## Work to be done
 1. Check Low power operation (BLE stack might not see the GPD activity and shut down the device - not tested)
+2. Make the GPD send API really generic (just sends out Toggle at the moment)
+3. Test decommissioning
+4. Make extesive operational tests
 
 ## Notes
 NB: GPD Channel for RX during 1st commissioning phase is always 11 (channel configuration channel)
@@ -40,6 +47,8 @@ NB: Any change to the .ISC will re-integrate the libmbedtls.a to the .cproject f
 
 2. An issue when using the RAIL MP library where RAIL_Idle(handle, RAIL_IDLE, ) aborts TX
 
+3. Re-wrote the architecture to enable Cryptographic calls due to RX phases
+
 
 ## Known issues :
   * The GP Sink Sends the Commissioning Repliess too late (~ 74ms)
@@ -49,3 +58,6 @@ NB: Any change to the .ISC will re-integrate the libmbedtls.a to the .cproject f
   * Issue where calling RAIL_Idle after TX using the MP lib aborts TX
   * Issue where Low Power is not supported, even on sample app
 
+## Disclaimer ##
+
+Unless otherwise specified in the specific directory, all examples are considered to be EXPERIMENTAL QUALITY which implies that the code provided in the repos has not been formally tested and is provided as-is.  It is not suitable for production environments.  In addition, this code will not be maintained and there may be no bug maintenance planned for these resources.

@@ -309,7 +309,7 @@ uint16_t gpd_init(void)
   // Initialise Radio
   emberGpdRadioInit();
   //Initialise the Gpd
-  EmberGpd_t *  gpdContext = emberGpdInit();
+  emberGpdInit();
 #ifdef DEBUG_RADIO
   debug_init();
 #endif

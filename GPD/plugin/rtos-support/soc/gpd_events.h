@@ -18,7 +18,8 @@
 #define GPD_EVENTS_H
 
 typedef enum gpd_evt_id_t {
-  gpd_evt_id_commissioned = 0,
+  gpd_evt_id_none = 0,
+  gpd_evt_id_commissioned,
   gpd_evt_id_decommissioned,
   gpd_evt_id_sent
 
