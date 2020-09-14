@@ -107,7 +107,7 @@
 									<listOptionValue builtIn="false" value="__STACK_SIZE=0x800"/>
 									<listOptionValue builtIn="false" value="HAL_CONFIG=1"/>
 									<listOptionValue builtIn="false" value="__HEAP_SIZE=0xD00"/>
-									<listOptionValue builtIn="false" value="EFR32MG12P332F1024GL125=1"/>
+									<listOptionValue builtIn="false" value="EFR32MG12P432F1024GL125=1"/>
 								</option>
 								<option id="com.silabs.ide.si32.gcc.cdt.managedbuild.tool.gnu.c.compiler.optimization.level.157039586" name="Optimization Level" superClass="com.silabs.ide.si32.gcc.cdt.managedbuild.tool.gnu.c.compiler.optimization.level" value="gnu.c.optimization.level.none" valueType="enumerated"/>
 								<inputType id="com.silabs.ide.si32.gcc.cdt.managedbuild.tool.gnu.c.compiler.input.1778124193" superClass="com.silabs.ide.si32.gcc.cdt.managedbuild.tool.gnu.c.compiler.input"/>
@@ -173,7 +173,7 @@
 									<listOptionValue builtIn="false" value="__STACK_SIZE=0x800"/>
 									<listOptionValue builtIn="false" value="HAL_CONFIG=1"/>
 									<listOptionValue builtIn="false" value="__HEAP_SIZE=0xD00"/>
-									<listOptionValue builtIn="false" value="EFR32MG12P332F1024GL125=1"/>
+									<listOptionValue builtIn="false" value="EFR32MG12P432F1024GL125=1"/>
 								</option>
 								<inputType id="org.eclipse.cdt.core.asmSource.840554421" superClass="org.eclipse.cdt.core.asmSource"/>
 							</tool>
