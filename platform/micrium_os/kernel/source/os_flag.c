@@ -88,6 +88,8 @@ void OSFlagCreate(OS_FLAG_GRP *p_grp,
   OS_ASSERT_DBG_ERR_SET((p_grp != DEF_NULL), *p_err, RTOS_ERR_NULL_PTR,; );
 
   CORE_ENTER_ATOMIC();
+
+  *p_grp = (OS_FLAG_GRP){0};
 #if (OS_OBJ_TYPE_REQ == DEF_ENABLED)
   p_grp->Type = OS_OBJ_TYPE_FLAG;                               // Set to event flag group type
 #endif
@@ -97,9 +99,6 @@ void OSFlagCreate(OS_FLAG_GRP *p_grp,
   (void)&p_name;
 #endif
   p_grp->Flags = flags;                                         // Set to desired initial value
-#if (OS_CFG_TS_EN == DEF_ENABLED)
-  p_grp->TS = 0u;
-#endif
   OS_PendListInit(&p_grp->PendList);
 
 #if (OS_CFG_DBG_EN == DEF_ENABLED)

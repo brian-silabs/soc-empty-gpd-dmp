@@ -83,11 +83,6 @@ CPU_INT08U OS_VOLATILE OSDbg_FlagModeClrEn = 0u;
 CPU_INT16U OS_VOLATILE OSDbg_FlagGrpSize = 0u;
 CPU_INT16U OS_VOLATILE OSDbg_FlagWidth = 0u;
 #endif
-#if OS_CFG_MEM_EN > 0u
-CPU_INT16U OS_VOLATILE OSDbg_MemSize = sizeof(OS_MEM);          // Mem. Partition header size (bytes)
-#else
-CPU_INT16U OS_VOLATILE OSDbg_MemSize = 0u;
-#endif
 
 #if (OS_MSG_EN == DEF_ENABLED)
 CPU_INT08U OS_VOLATILE OSDbg_MsgEn = 1u;
@@ -209,13 +204,6 @@ CPU_INT32U OS_VOLATILE const OSDbg_DataSize = 0u
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
                                               + sizeof(OSMonDbgListPtr)
                                               + sizeof(OSMonQty)
-#endif
-#endif
-
-#if (OS_CFG_MEM_EN == DEF_ENABLED)
-#if (OS_CFG_DBG_EN == DEF_ENABLED)
-                                              + sizeof(OSMemDbgListPtr)
-                                              + sizeof(OSMemQty)
 #endif
 #endif
 
@@ -351,10 +339,6 @@ void OS_Dbg_Init(void)
   temp08 = (CPU_INT08U)OSDbg_FlagModeClrEn;
   temp16 = (CPU_INT16U)OSDbg_FlagGrpSize;
   temp16 = (CPU_INT16U)OSDbg_FlagWidth;
-#endif
-
-#if (OS_CFG_MEM_EN == DEF_ENABLED)
-  temp16 = (CPU_INT16U)OSDbg_MemSize;
 #endif
 
   temp08 = (CPU_INT08U)OSDbg_MsgEn;

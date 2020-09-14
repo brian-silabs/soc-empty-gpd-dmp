@@ -54,6 +54,8 @@ const CPU_CHAR *os_core__c = "$Id: $";
  ********************************************************************************************************
  *******************************************************************************************************/
 
+#define  DEF_INT_OS_TICK_MAX_VAL                ((OS_TICK)-1)
+
 /********************************************************************************************************
  *                                       DEFAULT RUNTIME CONFIGURATION
  *******************************************************************************************************/
@@ -103,8 +105,13 @@ extern const OS_INIT_CFG OS_InitCfg;
 #endif
 
 #if  (OS_CFG_SCHED_ROUND_ROBIN_EN == DEF_ENABLED)
-static sl_sleeptimer_timer_handle_t OSRoundRobinTimer;
-static OS_TCB                       *OSRoundRobinCurTCB;
+sl_sleeptimer_timer_handle_t OSRoundRobinTimer;
+OS_TCB                       *OSRoundRobinCurTCB;
+#endif
+
+#if (OS_CFG_TICK_EN == DEF_ENABLED)
+CPU_INT32U OSDelayMaxMilli = 0u;
+OS_TICK OSDelayMaxTick = 0u;
 #endif
 
 /*
@@ -301,6 +308,7 @@ void OS_ConfigureTickRate(OS_RATE_HZ tick_rate)
  *                       - RTOS_ERR_NONE
  *                       - RTOS_ERR_OS_ILLEGAL_RUN_TIME
  *                       - RTOS_ERR_SEG_OVF
+ *                       - RTOS_ERR_INVALID_CFG
  *
  * @note     (1) This function MUST be called AFTER Common's Mem_Init().
  *******************************************************************************************************/
@@ -423,6 +431,16 @@ void OSInit(RTOS_ERR *p_err)
     RTOS_ERR_SET(*p_err, RTOS_ERR_FAIL);
     return;
   }
+
+  if (OSCfg_TickRate_Hz <= 1000u) {
+    OSDelayMaxMilli =  DEF_INT_OS_TICK_MAX_VAL;
+  } else {
+    OSDelayMaxMilli = (DEF_INT_OS_TICK_MAX_VAL / OSCfg_TickRate_Hz) * 1000u;
+  }
+
+  OSDelayMaxTick = (DEF_INT_OS_TICK_MAX_VAL / sl_sleeptimer_get_timer_frequency()) * OSCfg_TickRate_Hz;
+
+  OS_ASSERT_DBG_ERR_SET((OSCfg_TickRate_Hz <= sl_sleeptimer_get_timer_frequency()), *p_err, RTOS_ERR_INVALID_CFG, ;)
 #endif
 
   OSRunning = OS_STATE_OS_STOPPED;                              // Indicate that multitasking not started
@@ -464,10 +482,10 @@ void OSInit(RTOS_ERR *p_err)
       *p_stk = 0u;
       p_stk++;
     }
-  }
 #if (OS_CFG_TASK_STK_REDZONE_EN == DEF_ENABLED)                 // Initialize Redzoned ISR stack
-  OS_TaskStkRedzoneInit(OSCfg_ISRStkBasePtr, OSCfg_ISRStkSize);
+    OS_TaskStkRedzoneInit(OSCfg_ISRStkBasePtr, OSCfg_ISRStkSize);
 #endif
+  }
 #endif
 #else
   if (OSCfg_ISRStkSize > 0u) {
@@ -475,14 +493,14 @@ void OSInit(RTOS_ERR *p_err)
     if (p_stk != DEF_NULL) {
       size = OSCfg_ISRStkSize;
       while (size > 0u) {
-        size--;
-        *p_stk = 0u;
+	    size--;
+	    *p_stk = 0u;
         p_stk++;
       }
-    }
 #if (OS_CFG_TASK_STK_REDZONE_EN == DEF_ENABLED)                 // Initialize Redzoned ISR stack
-    OS_TaskStkRedzoneInit(OSCfg_ISRStkBasePtr, OSCfg_ISRStkSize);
+      OS_TaskStkRedzoneInit(OSCfg_ISRStkBasePtr, OSCfg_ISRStkSize);
 #endif
+    }
   }
 #endif
 
@@ -511,13 +529,6 @@ void OSInit(RTOS_ERR *p_err)
   OSFlagDbgListPtr = DEF_NULL;
   OSFlagQty = 0u;
 #endif
-#endif
-
-#if (OS_CFG_MEM_EN == DEF_ENABLED)                              // Initialize the Memory Manager module
-  OS_MemInit(p_err);
-  if (RTOS_ERR_CODE_GET(*p_err) != RTOS_ERR_NONE) {
-    return;
-  }
 #endif
 
 #if (OS_MSG_EN == DEF_ENABLED)                                  // Initialize the free list of OS_MSGs
@@ -652,7 +663,6 @@ void OSSched(void)
   CPU_BOOLEAN stk_status;
 #endif
   CORE_DECLARE_IRQ_STATE;
-
   //                                                               Can't schedule when the kernel is stopped.
   OS_ASSERT_DBG_NO_ERR((OSRunning == OS_STATE_OS_RUNNING), RTOS_ERR_NOT_READY,; );
 
@@ -673,14 +683,21 @@ void OSSched(void)
     }
 
 #if (OS_CFG_SCHED_ROUND_ROBIN_EN == DEF_ENABLED)
-    if (OSSchedRoundRobinEn) {
-      if (OSTCBHighRdyPtr->TimeQuantaCtr == 0) {
-        OS_SchedRoundRobinResetQuanta(OSTCBHighRdyPtr);
-        OS_RdyListMoveHeadToTail(&OSRdyList[OSPrioHighRdy]);
+  if ((OSSchedRoundRobinEn)
+      && ((OSRoundRobinCurTCB->TimeQuantaCtr != 0u))) {
+      sl_status_t status;
+      uint32_t time_remain;
+                                                        // Check if round robin timer is currently running, if yes store remaining time
+      status = sl_sleeptimer_get_timer_time_remaining(&OSRoundRobinTimer, &time_remain);
+      if (status == SL_STATUS_OK) {
+        OSRoundRobinCurTCB->TimeQuantaCtr = time_remain;
+        sl_sleeptimer_stop_timer(&OSRoundRobinTimer);
+      }
+                                                        // Check if round robin timer expire while in scheduler
+      if (OSRoundRobinCurTCB->TimeQuantaCtr == 0u) {
+        // Move current task to tail
+        OS_RdyListMoveHeadToTail(&OSRdyList[OSRoundRobinCurTCB->Prio]);
         OSTCBHighRdyPtr = OSRdyList[OSPrioHighRdy].HeadPtr;
-        OS_SchedRoundRobinRestartTimer(OSTCBHighRdyPtr);
-      } else if (OSTCBHighRdyPtr != OSTCBCurPtr) {
-        OS_SchedRoundRobinRestartTimer(OSTCBHighRdyPtr);
       }
     }
 #endif
@@ -848,6 +865,7 @@ void OSSchedRoundRobinCfg(CPU_BOOLEAN en,
                           OS_TICK     dflt_time_quanta,
                           RTOS_ERR    *p_err)
 {
+  sl_status_t status;
   CORE_DECLARE_IRQ_STATE;
 
   OS_ASSERT_DBG_ERR_PTR_VALIDATE(p_err,; );
@@ -855,24 +873,30 @@ void OSSchedRoundRobinCfg(CPU_BOOLEAN en,
   RTOS_ERR_SET(*p_err, RTOS_ERR_NONE);
 
   CORE_ENTER_ATOMIC();
+
+  if (dflt_time_quanta > 0u) {
+    OSSchedRoundRobinDfltTimeQuanta = dflt_time_quanta;
+  } else {
+    OSSchedRoundRobinDfltTimeQuanta = (OS_TICK)(OSTimeTickRateHzGet(p_err) / 10u);
+  }
+
   if ((en != DEF_ENABLED)
       && (OSSchedRoundRobinEn == DEF_TRUE)) {
     OSSchedRoundRobinEn = DEF_FALSE;
-    (void)sl_sleeptimer_get_timer_time_remaining(&OSRoundRobinTimer,
+    status = sl_sleeptimer_get_timer_time_remaining(&OSRoundRobinTimer,
                                                  &OSRoundRobinCurTCB->TimeQuantaCtr);
+    if (status != SL_STATUS_OK) {
+      OSRoundRobinCurTCB->TimeQuantaCtr = 0u;
+    }
+
     sl_sleeptimer_stop_timer(&OSRoundRobinTimer);
 
     OSRoundRobinCurTCB = DEF_NULL;
   } else if ((en == DEF_ENABLED)
              && (OSSchedRoundRobinEn == DEF_FALSE)) {
     OSSchedRoundRobinEn = DEF_TRUE;
+    OS_SchedRoundRobinResetQuanta(OSTCBCurPtr);
     OS_SchedRoundRobinRestartTimer(OSTCBCurPtr);
-  }
-
-  if (dflt_time_quanta > 0u) {
-    OSSchedRoundRobinDfltTimeQuanta = dflt_time_quanta;
-  } else {
-    OSSchedRoundRobinDfltTimeQuanta = (OS_TICK)(OSTimeTickRateHzGet(p_err) / 10u);
   }
   CORE_EXIT_ATOMIC();
 }
@@ -896,6 +920,7 @@ void OSSchedRoundRobinCfg(CPU_BOOLEAN en,
 void OSSchedRoundRobinYield(RTOS_ERR *p_err)
 {
   OS_RDY_LIST *p_rdy_list;
+  sl_status_t status;
   CORE_DECLARE_IRQ_STATE;
 
   OS_ASSERT_DBG_ERR_PTR_VALIDATE(p_err,; );
@@ -921,8 +946,16 @@ void OSSchedRoundRobinYield(RTOS_ERR *p_err)
     return;
   }
 
-  OS_SchedRoundRobinResetQuanta(p_rdy_list->HeadPtr);
+  status = sl_sleeptimer_stop_timer(&OSRoundRobinTimer);
+  if (status != SL_STATUS_OK) {
+    CORE_EXIT_ATOMIC();
+    RTOS_ERR_SET(*p_err, RTOS_ERR_FAIL);
+    return;
+  }
+
+  p_rdy_list->HeadPtr->TimeQuantaCtr = 0u;                      // TimeQuantaCtr will be reset next time this task is scheduled
   OS_RdyListMoveHeadToTail(p_rdy_list);                         // Move current OS_TCB to the end of the list
+
   CORE_EXIT_ATOMIC();
 
   OSSched();                                                    // Run new task
@@ -1068,6 +1101,13 @@ void OS_Pend(OS_PEND_OBJ *p_obj,
   OSTCBCurPtr->PendOn = pending_on;                             // Resource not available, wait until it is
   OSTCBCurPtr->PendStatus = OS_STATUS_PEND_OK;
 
+#if (OS_CFG_SCHED_ROUND_ROBIN_EN == DEF_ENABLED)
+  if (OSSchedRoundRobinEn) {
+    OSRoundRobinCurTCB->TimeQuantaCtr = 0u;                     // Time quanta counter will be reset later.
+    (void)sl_sleeptimer_stop_timer(&OSRoundRobinTimer);
+  }
+#endif
+
   OS_TaskBlock(OSTCBCurPtr,                                     // Block the task and add it to the tick list if needed
                timeout);
 
@@ -1079,10 +1119,6 @@ void OS_Pend(OS_PEND_OBJ *p_obj,
   } else {
     OSTCBCurPtr->PendObjPtr = DEF_NULL;                         // If no object being pended on, clear the pend object
   }
-
-#if (OS_CFG_SCHED_ROUND_ROBIN_EN == DEF_ENABLED)
-  OS_SchedRoundRobinResetQuanta(OSTCBCurPtr);
-#endif
 
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
   OS_PendDbgNameAdd(p_obj,
@@ -2038,6 +2074,7 @@ void OS_SchedRoundRobin(sl_sleeptimer_timer_handle_t *handle,
 
   CORE_ENTER_ATOMIC();
   p_tcb->TimeQuantaCtr = 0u;
+  OS_RdyListMoveHeadToTail(&OSRdyList[OSRoundRobinCurTCB->Prio]);
   CORE_EXIT_ATOMIC();
 
   OSSched();
@@ -2058,9 +2095,6 @@ void OS_SchedRoundRobin(sl_sleeptimer_timer_handle_t *handle,
  ********************************************************************************************************/
 void OS_SchedRoundRobinRestartTimer(OS_TCB* p_tcb)
 {
-  bool running = 0;
-  uint32_t quanta;
-
   if (p_tcb == DEF_NULL) {
     return;
   }
@@ -2069,17 +2103,8 @@ void OS_SchedRoundRobinRestartTimer(OS_TCB* p_tcb)
     return;
   }
 
-  sl_sleeptimer_is_timer_running(&OSRoundRobinTimer, &running);
-  if (running) {
-    if (OSRoundRobinCurTCB->Prio != p_tcb->Prio) {              // Only save TimeQuanta when preempting
-      (void)sl_sleeptimer_get_timer_time_remaining(&OSRoundRobinTimer, &OSRoundRobinCurTCB->TimeQuantaCtr);
-    }
-    sl_sleeptimer_stop_timer(&OSRoundRobinTimer);
-  }
-
-  quanta = (uint64_t)(((uint64_t)p_tcb->TimeQuantaCtr * (uint64_t)sl_sleeptimer_get_timer_frequency()) + (OSCfg_TickRate_Hz - 1u)) / OSCfg_TickRate_Hz;
   sl_sleeptimer_start_timer(&OSRoundRobinTimer,
-                            quanta,
+                            p_tcb->TimeQuantaCtr,
                             OS_SchedRoundRobin,
                             (void *)p_tcb,
                             0u,
@@ -2108,9 +2133,9 @@ void OS_SchedRoundRobinResetQuanta(OS_TCB *p_tcb)
   }
 
   if (p_tcb->TimeQuanta == 0u) {                                // See if we need to use the default time slice
-    p_tcb->TimeQuantaCtr = OSSchedRoundRobinDfltTimeQuanta;
+    p_tcb->TimeQuantaCtr = (uint64_t)(((uint64_t)OSSchedRoundRobinDfltTimeQuanta * (uint64_t)sl_sleeptimer_get_timer_frequency()) + (OSCfg_TickRate_Hz - 1u)) / OSCfg_TickRate_Hz;
   } else {
-    p_tcb->TimeQuantaCtr = p_tcb->TimeQuanta;                   // Load time slice counter with new time
+    p_tcb->TimeQuantaCtr = (uint64_t)(((uint64_t)p_tcb->TimeQuanta * (uint64_t)sl_sleeptimer_get_timer_frequency()) + (OSCfg_TickRate_Hz - 1u)) / OSCfg_TickRate_Hz;
   }
 }
 
@@ -2135,7 +2160,7 @@ void OS_TaskBlock(OS_TCB  *p_tcb,
 #if (OS_CFG_TICK_EN == DEF_ENABLED)
     sl_status_t status;
 
-    uint32_t delay = (uint64_t)(((uint64_t)timeout * (uint64_t)sl_sleeptimer_get_timer_frequency()) + (OSCfg_TickRate_Hz - 1u)) / OSCfg_TickRate_Hz;
+    uint32_t delay = (uint64_t)(((uint64_t)timeout * (uint64_t)sl_sleeptimer_get_timer_frequency()) + ((uint64_t)OSCfg_TickRate_Hz - 1u)) / OSCfg_TickRate_Hz;
     status = sl_sleeptimer_start_timer(&p_tcb->TimerHandle,
                                        delay,
                                        OS_TimerCallback,

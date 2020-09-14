@@ -97,6 +97,8 @@ void OSQCreate(OS_Q       *p_q,
   OS_ASSERT_DBG_ERR_SET((max_qty <= OSCfg_MsgPoolSize), *p_err, RTOS_ERR_INVALID_ARG,; );
 
   CORE_ENTER_ATOMIC();
+
+  *p_q = (OS_Q){0};
 #if (OS_OBJ_TYPE_REQ == DEF_ENABLED)
   p_q->Type = OS_OBJ_TYPE_Q;                                    // Mark the data structure as a message queue
 #endif

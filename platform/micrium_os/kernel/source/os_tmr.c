@@ -143,7 +143,8 @@ void OSTmrCreate(OS_TMR              *p_tmr,
     OS_TmrLock();
   }
 
-  p_tmr->State = OS_TMR_STATE_STOPPED;                          // Initialize the timer fields
+  *p_tmr = (OS_TMR){0};                                         // Initialize the timer fields
+  p_tmr->State = OS_TMR_STATE_STOPPED;
 #if (OS_OBJ_TYPE_REQ == DEF_ENABLED)
   p_tmr->Type = OS_OBJ_TYPE_TMR;
 #endif
@@ -153,13 +154,10 @@ void OSTmrCreate(OS_TMR              *p_tmr,
   (void)&p_name;
 #endif
   p_tmr->Dly = dly;
-  p_tmr->Remain = 0u;
   p_tmr->Period = period;
   p_tmr->Opt = opt;
   p_tmr->CallbackPtr = p_callback;
   p_tmr->CallbackPtrArg = p_callback_arg;
-  p_tmr->NextPtr = DEF_NULL;
-  p_tmr->PrevPtr = DEF_NULL;
 
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
   OS_TmrDbgListAdd(p_tmr);

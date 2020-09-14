@@ -363,13 +363,11 @@ CPU_CHAR *Str_Copy_N(CPU_CHAR       *p_str_dest,
     len_copy++;
   }
 
-#if 0
   //                                                               Rtn NULL if NULL ptr(s) found (see Note #6b).
   if ((p_str_copy_dest == DEF_NULL)
       || (p_str_copy_src == DEF_NULL)) {
     return (DEF_NULL);
   }
-#endif
 
   if (len_copy < len_max) {                                     // If copy str len < max buf len (see Note #2), ...
     *p_str_copy_dest = (CPU_CHAR)'\0';                          // ... copy NULL char (see Note #6c).
@@ -502,11 +500,9 @@ CPU_CHAR *Str_Cat_N(CPU_CHAR       *p_str_dest,
     p_str_cat_dest++;
   }
 
-#if 0
   if (p_str_cat_dest == DEF_NULL) {                             // Rtn NULL if NULL ptr found (see Note #4b).
     return (DEF_NULL);
   }
-#endif
 
   p_str_cat_src = p_str_cat;
   len_cat = 0u;
@@ -521,13 +517,11 @@ CPU_CHAR *Str_Cat_N(CPU_CHAR       *p_str_dest,
     len_cat++;
   }
 
-#if 0
   //                                                               Rtn NULL if NULL ptr(s) found (see Note #4b).
   if ((p_str_cat_dest == DEF_NULL)
       || (p_str_cat_src == DEF_NULL)) {
     return (DEF_NULL);
   }
-#endif
 
   *p_str_cat_dest = (CPU_CHAR)'\0';                             // Append NULL char (see Note #1).
 

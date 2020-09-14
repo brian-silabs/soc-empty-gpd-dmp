@@ -91,13 +91,12 @@ void OSSemCreate(OS_SEM     *p_sem,
   OS_ASSERT_DBG_ERR_SET((p_sem != DEF_NULL), *p_err, RTOS_ERR_NULL_PTR,; );
 
   CORE_ENTER_ATOMIC();
+
+  *p_sem = (OS_SEM){0};
 #if (OS_OBJ_TYPE_REQ == DEF_ENABLED)
   p_sem->Type = OS_OBJ_TYPE_SEM;                                // Mark the data structure as a semaphore
 #endif
   p_sem->Ctr = cnt;                                             // Set semaphore value
-#if (OS_CFG_TS_EN == DEF_ENABLED)
-  p_sem->TS = 0u;
-#endif
 #if (OS_CFG_DBG_EN == DEF_ENABLED)
   p_sem->NamePtr = p_name;                                      // Save the name of the semaphore
 #else

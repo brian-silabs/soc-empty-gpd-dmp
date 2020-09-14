@@ -88,6 +88,8 @@ void OSMonCreate(OS_MON   *p_mon,
   OS_ASSERT_DBG_ERR_SET((p_mon != DEF_NULL), *p_err, RTOS_ERR_NULL_PTR,; );
 
   CORE_ENTER_ATOMIC();
+
+  *p_mon = (OS_MON){0};
 #if (OS_OBJ_TYPE_REQ == DEF_ENABLED)
   p_mon->Type = OS_OBJ_TYPE_MON;                                // Mark the data structure as a monitor
 #endif

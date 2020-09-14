@@ -152,7 +152,15 @@ void OSTimeDly(OS_TICK  dly,
     uint32_t delay;
 
     CORE_ENTER_ATOMIC();
+
+    // Check for potential overflow
+    if (delay_ticks > OSDelayMaxTick) {
+      RTOS_ERR_SET(*p_err, RTOS_ERR_WOULD_OVF);
+      return;
+    }
+
     delay = (uint64_t)(((uint64_t)delay_ticks * (uint64_t)sl_sleeptimer_get_timer_frequency()) + (OSCfg_TickRate_Hz - 1u)) / OSCfg_TickRate_Hz;
+
     status = sl_sleeptimer_start_timer(&OSTCBCurPtr->TimerHandle,
                                        delay,
                                        OS_TimerCallback,
@@ -180,9 +188,6 @@ void OSTimeDly(OS_TICK  dly,
       return;
     }
 
-#if (OS_CFG_SCHED_ROUND_ROBIN_EN == DEF_ENABLED)
-    OS_SchedRoundRobinResetQuanta(OSTCBCurPtr);
-#endif
     OS_RdyListMoveHeadToTail(p_rdy_list);
     CORE_EXIT_ATOMIC();
   }
@@ -247,6 +252,9 @@ void OSTimeDlyHMSM(CPU_INT16U hours,
 {
   OS_OPT opt_time;
   OS_TICK ticks;
+  OS_TICK hours_tick;
+  OS_TICK minutes_tick;
+  OS_TICK overflow_check;
 
   OS_ASSERT_DBG_ERR_PTR_VALIDATE(p_err,; );
 
@@ -264,9 +272,22 @@ void OSTimeDlyHMSM(CPU_INT16U hours,
     OS_ASSERT_DBG_ERR_SET((hours <= 999u), *p_err, RTOS_ERR_INVALID_ARG,; );
   }
 
+  hours_tick = (OS_TICK)hours * (OS_TICK)3600u;
+  minutes_tick = (OS_TICK)minutes * (OS_TICK)60u;
+
+  // Convert everything to milliseconds
+  overflow_check = ((hours_tick + minutes_tick + (OS_TICK)seconds) * (OS_TICK)1000u) + milli;
+
+  // Check for potential overflow
+  if (overflow_check > OSDelayMaxMilli) {
+    RTOS_ERR_SET(*p_err, RTOS_ERR_WOULD_OVF);
+    return;
+  }
+
                                                                 // Compute the total number of clock ticks required..   */
                                                                 // .. (rounded to the nearest tick)                     */
-  ticks = ((OS_TICK)hours * (OS_TICK)3600u + (OS_TICK)minutes * (OS_TICK)60u + (OS_TICK)seconds) * OSCfg_TickRate_Hz
+
+  ticks = (hours_tick + minutes_tick + (OS_TICK)seconds) * OSCfg_TickRate_Hz
           + (OSCfg_TickRate_Hz * ((OS_TICK)milli + (OS_TICK)500u / OSCfg_TickRate_Hz)) / (OS_TICK)1000u;
 
   OSTimeDly(ticks, opt_time, p_err);

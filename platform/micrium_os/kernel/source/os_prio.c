@@ -84,9 +84,9 @@ void OS_PrioInit(void)
  *******************************************************************************************************/
 OS_PRIO OS_PrioGetHighest(void)
 {
-#if   (OS_CFG_PRIO_MAX == 8)                 // Optimize for less than word size nbr of priorities.
-  return ((OS_PRIO)CPU_CntLeadZeros8((CPU_INT8U)(OSPrioTbl[0] >> 24u)));
-#elif (OS_CFG_PRIO_MAX == 16)                 // Optimize for less than word size nbr of priorities.
+#if   (OS_CFG_PRIO_MAX == 8)                                    // Optimize for less than word size nbr of priorities.
+  return ((OS_PRIO)CPU_CntLeadZeros08((CPU_INT08U)(OSPrioTbl[0] >> 24u)));
+#elif (OS_CFG_PRIO_MAX == 16)                                   // Optimize for less than word size nbr of priorities.
   return ((OS_PRIO)CPU_CntLeadZeros16((CPU_INT16U)(OSPrioTbl[0] >> 16u)));
 #elif (OS_CFG_PRIO_MAX <= DEF_INT_CPU_NBR_BITS)                 // Optimize for less than word size nbr of priorities.
   return ((OS_PRIO)CPU_CntLeadZeros(OSPrioTbl[0]));

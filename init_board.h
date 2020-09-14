@@ -25,6 +25,7 @@ extern "C" {
 #include "stdbool.h"
 
 void initBoard(void);
+void initVcomEnable(void);
 
 #ifdef __cplusplus
 }

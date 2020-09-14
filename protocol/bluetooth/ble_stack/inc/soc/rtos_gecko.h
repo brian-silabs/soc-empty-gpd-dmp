@@ -29,9 +29,11 @@ extern "C" {
 typedef uint8_t   uint8;
 typedef uint16_t  uint16;
 typedef uint32_t  uint32;
+typedef uint64_t  uint64;
 typedef int8_t    int8;
 typedef int16_t   int16;
 typedef int32_t   int32;
+typedef int64_t   int64;
 
 typedef struct {
   uint16_t len;
@@ -119,6 +121,7 @@ uint32 gecko_can_sleep_ms(void);
 
 /**
  * Poll the stack how long it can sleep until the time it will process the next message.
+ * Note the tick is calculated with sleep timer clock frequency.
  * @return maximum sleep time in ticks; 0 if the stack cannot sleep; 0xFFFFFFFF if it has no pending message
  */
 uint32 gecko_can_sleep_ticks(void);
@@ -143,6 +146,8 @@ void gecko_priority_handle(void);
 /**
  * Put the stack to sleep for a maximum of @param max milliseconds.
  * Note that the stack may wake up earlier due to an external event.
+ * @param max number of milliseconds request to sleep. This cannot be greater than the value
+ * sl_sleeptimer_get_max_ms32_conversion API returns.
  * @return number of milliseconds actually slept.
  */
 uint32 gecko_sleep_for_ms(uint32 max);
@@ -185,9 +190,7 @@ enum system_linklayer_config_key
 enum le_gap_address_type
 {
     le_gap_address_type_public                                   = 0x0,
-    le_gap_address_type_random                                   = 0x1,
-    le_gap_address_type_public_identity                          = 0x2,
-    le_gap_address_type_random_identity                          = 0x3
+    le_gap_address_type_random                                   = 0x1
 };
 
 enum le_gap_phy_type
@@ -359,7 +362,8 @@ enum homekit_category
     homekit_sprinkler                                            = 0x1c,
     homekit_faucet                                               = 0x1d,
     homekit_shower_system                                        = 0x1e,
-    homekit_remote                                               = 0x20
+    homekit_remote                                               = 0x20,
+    homekit_wifi_router                                          = 0x21
 };
 
 enum homekit_status_code
@@ -443,6 +447,7 @@ enum gecko_dev_types
 #define FLASH_PS_KEY_APPLICATION_AI                                  0x3b
 #define FLASH_PS_KEY_IDENTITY_ADDR_TYPE                              0x3c
 #define FLASH_PS_KEY_GATT_DB_HASH                                    0x3d
+#define FLASH_PS_KEY_OTA_RF_PATH                                     0x3e
 #define FLASH_PS_KEY_BONDING_DB_CONFIG                               0x3fff
 
 
@@ -497,6 +502,8 @@ enum gecko_dev_types
 #define gecko_cmd_le_gap_set_long_advertising_data_id                 (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x20030000)
 #define gecko_cmd_le_gap_enable_whitelisting_id                       (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x21030000)
 #define gecko_cmd_le_gap_set_conn_timing_parameters_id                (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x22030000)
+#define gecko_cmd_le_gap_set_advertise_random_address_id              (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x25030000)
+#define gecko_cmd_le_gap_clear_advertise_random_address_id            (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x26030000)
 #define gecko_cmd_sync_open_id                                        (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x00420000)
 #define gecko_cmd_sync_close_id                                       (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x01420000)
 #define gecko_cmd_le_connection_set_parameters_id                     (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x00080000)
@@ -537,6 +544,9 @@ enum gecko_dev_types
 #define gecko_cmd_gatt_server_set_capabilities_id                     (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x080a0000)
 #define gecko_cmd_gatt_server_set_max_mtu_id                          (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x0a0a0000)
 #define gecko_cmd_gatt_server_get_mtu_id                              (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x0b0a0000)
+#define gecko_cmd_gatt_server_enable_capabilities_id                  (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x0c0a0000)
+#define gecko_cmd_gatt_server_disable_capabilities_id                 (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x0d0a0000)
+#define gecko_cmd_gatt_server_get_enabled_capabilities_id             (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x0e0a0000)
 #define gecko_cmd_hardware_set_soft_timer_id                          (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x000c0000)
 #define gecko_cmd_hardware_get_time_id                                (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x0b0c0000)
 #define gecko_cmd_hardware_set_lazy_soft_timer_id                     (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x0c0c0000)
@@ -574,27 +584,33 @@ enum gecko_dev_types
 #define gecko_cmd_homekit_gsn_action_id                               (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x07130000)
 #define gecko_cmd_homekit_event_notification_id                       (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x08130000)
 #define gecko_cmd_homekit_broadcast_action_id                         (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x09130000)
+#define gecko_cmd_homekit_configure_product_data_id                   (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x0a130000)
 #define gecko_cmd_coex_set_options_id                                 (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x00200000)
 #define gecko_cmd_coex_get_counters_id                                (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x01200000)
 #define gecko_cmd_coex_set_parameters_id                              (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x02200000)
+#define gecko_cmd_coex_set_directional_priority_pulse_id              (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x03200000)
 #define gecko_cmd_l2cap_coc_send_connection_request_id                (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x01430000)
 #define gecko_cmd_l2cap_coc_send_connection_response_id               (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x02430000)
 #define gecko_cmd_l2cap_coc_send_le_flow_control_credit_id            (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x03430000)
 #define gecko_cmd_l2cap_coc_send_disconnection_request_id             (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x04430000)
 #define gecko_cmd_l2cap_coc_send_data_id                              (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x05430000)
-#define gecko_cmd_cte_transmitter_enable_cte_response_id              (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x00440000)
-#define gecko_cmd_cte_transmitter_disable_cte_response_id             (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x01440000)
-#define gecko_cmd_cte_transmitter_start_connectionless_cte_id         (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x02440000)
-#define gecko_cmd_cte_transmitter_stop_connectionless_cte_id          (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x03440000)
+#define gecko_cmd_cte_transmitter_enable_connection_cte_id            (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x00440000)
+#define gecko_cmd_cte_transmitter_disable_connection_cte_id           (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x01440000)
+#define gecko_cmd_cte_transmitter_enable_connectionless_cte_id        (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x02440000)
+#define gecko_cmd_cte_transmitter_disable_connectionless_cte_id       (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x03440000)
 #define gecko_cmd_cte_transmitter_set_dtm_parameters_id               (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x04440000)
 #define gecko_cmd_cte_transmitter_clear_dtm_parameters_id             (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x05440000)
+#define gecko_cmd_cte_transmitter_enable_silabs_cte_id                (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x06440000)
+#define gecko_cmd_cte_transmitter_disable_silabs_cte_id               (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x07440000)
 #define gecko_cmd_cte_receiver_configure_id                           (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x00450000)
-#define gecko_cmd_cte_receiver_start_iq_sampling_id                   (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x01450000)
-#define gecko_cmd_cte_receiver_stop_iq_sampling_id                    (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x02450000)
-#define gecko_cmd_cte_receiver_start_connectionless_iq_sampling_id    (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x03450000)
-#define gecko_cmd_cte_receiver_stop_connectionless_iq_sampling_id     (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x04450000)
+#define gecko_cmd_cte_receiver_enable_connection_cte_id               (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x01450000)
+#define gecko_cmd_cte_receiver_disable_connection_cte_id              (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x02450000)
+#define gecko_cmd_cte_receiver_enable_connectionless_cte_id           (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x03450000)
+#define gecko_cmd_cte_receiver_disable_connectionless_cte_id          (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x04450000)
 #define gecko_cmd_cte_receiver_set_dtm_parameters_id                  (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x05450000)
 #define gecko_cmd_cte_receiver_clear_dtm_parameters_id                (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x06450000)
+#define gecko_cmd_cte_receiver_enable_silabs_cte_id                   (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x07450000)
+#define gecko_cmd_cte_receiver_disable_silabs_cte_id                  (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x08450000)
 #define gecko_cmd_user_message_to_target_id                           (((uint32)gecko_dev_type_gecko)|gecko_msg_type_cmd|0x00ff0000)
 
 #define gecko_rsp_dfu_reset_id                                        (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x00000000)
@@ -648,6 +664,8 @@ enum gecko_dev_types
 #define gecko_rsp_le_gap_set_long_advertising_data_id                 (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x20030000)
 #define gecko_rsp_le_gap_enable_whitelisting_id                       (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x21030000)
 #define gecko_rsp_le_gap_set_conn_timing_parameters_id                (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x22030000)
+#define gecko_rsp_le_gap_set_advertise_random_address_id              (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x25030000)
+#define gecko_rsp_le_gap_clear_advertise_random_address_id            (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x26030000)
 #define gecko_rsp_sync_open_id                                        (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x00420000)
 #define gecko_rsp_sync_close_id                                       (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x01420000)
 #define gecko_rsp_le_connection_set_parameters_id                     (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x00080000)
@@ -688,6 +706,9 @@ enum gecko_dev_types
 #define gecko_rsp_gatt_server_set_capabilities_id                     (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x080a0000)
 #define gecko_rsp_gatt_server_set_max_mtu_id                          (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x0a0a0000)
 #define gecko_rsp_gatt_server_get_mtu_id                              (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x0b0a0000)
+#define gecko_rsp_gatt_server_enable_capabilities_id                  (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x0c0a0000)
+#define gecko_rsp_gatt_server_disable_capabilities_id                 (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x0d0a0000)
+#define gecko_rsp_gatt_server_get_enabled_capabilities_id             (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x0e0a0000)
 #define gecko_rsp_hardware_set_soft_timer_id                          (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x000c0000)
 #define gecko_rsp_hardware_get_time_id                                (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x0b0c0000)
 #define gecko_rsp_hardware_set_lazy_soft_timer_id                     (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x0c0c0000)
@@ -725,27 +746,33 @@ enum gecko_dev_types
 #define gecko_rsp_homekit_gsn_action_id                               (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x07130000)
 #define gecko_rsp_homekit_event_notification_id                       (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x08130000)
 #define gecko_rsp_homekit_broadcast_action_id                         (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x09130000)
+#define gecko_rsp_homekit_configure_product_data_id                   (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x0a130000)
 #define gecko_rsp_coex_set_options_id                                 (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x00200000)
 #define gecko_rsp_coex_get_counters_id                                (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x01200000)
 #define gecko_rsp_coex_set_parameters_id                              (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x02200000)
+#define gecko_rsp_coex_set_directional_priority_pulse_id              (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x03200000)
 #define gecko_rsp_l2cap_coc_send_connection_request_id                (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x01430000)
 #define gecko_rsp_l2cap_coc_send_connection_response_id               (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x02430000)
 #define gecko_rsp_l2cap_coc_send_le_flow_control_credit_id            (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x03430000)
 #define gecko_rsp_l2cap_coc_send_disconnection_request_id             (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x04430000)
 #define gecko_rsp_l2cap_coc_send_data_id                              (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x05430000)
-#define gecko_rsp_cte_transmitter_enable_cte_response_id              (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x00440000)
-#define gecko_rsp_cte_transmitter_disable_cte_response_id             (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x01440000)
-#define gecko_rsp_cte_transmitter_start_connectionless_cte_id         (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x02440000)
-#define gecko_rsp_cte_transmitter_stop_connectionless_cte_id          (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x03440000)
+#define gecko_rsp_cte_transmitter_enable_connection_cte_id            (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x00440000)
+#define gecko_rsp_cte_transmitter_disable_connection_cte_id           (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x01440000)
+#define gecko_rsp_cte_transmitter_enable_connectionless_cte_id        (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x02440000)
+#define gecko_rsp_cte_transmitter_disable_connectionless_cte_id       (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x03440000)
 #define gecko_rsp_cte_transmitter_set_dtm_parameters_id               (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x04440000)
 #define gecko_rsp_cte_transmitter_clear_dtm_parameters_id             (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x05440000)
+#define gecko_rsp_cte_transmitter_enable_silabs_cte_id                (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x06440000)
+#define gecko_rsp_cte_transmitter_disable_silabs_cte_id               (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x07440000)
 #define gecko_rsp_cte_receiver_configure_id                           (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x00450000)
-#define gecko_rsp_cte_receiver_start_iq_sampling_id                   (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x01450000)
-#define gecko_rsp_cte_receiver_stop_iq_sampling_id                    (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x02450000)
-#define gecko_rsp_cte_receiver_start_connectionless_iq_sampling_id    (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x03450000)
-#define gecko_rsp_cte_receiver_stop_connectionless_iq_sampling_id     (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x04450000)
+#define gecko_rsp_cte_receiver_enable_connection_cte_id               (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x01450000)
+#define gecko_rsp_cte_receiver_disable_connection_cte_id              (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x02450000)
+#define gecko_rsp_cte_receiver_enable_connectionless_cte_id           (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x03450000)
+#define gecko_rsp_cte_receiver_disable_connectionless_cte_id          (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x04450000)
 #define gecko_rsp_cte_receiver_set_dtm_parameters_id                  (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x05450000)
 #define gecko_rsp_cte_receiver_clear_dtm_parameters_id                (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x06450000)
+#define gecko_rsp_cte_receiver_enable_silabs_cte_id                   (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x07450000)
+#define gecko_rsp_cte_receiver_disable_silabs_cte_id                  (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x08450000)
 #define gecko_rsp_user_message_to_target_id                           (((uint32)gecko_dev_type_gecko)|gecko_msg_type_rsp|0x00ff0000)
 
 #define gecko_evt_dfu_boot_id                                         (((uint32)gecko_dev_type_gecko)|gecko_msg_type_evt|0x00000000)
@@ -807,7 +834,10 @@ enum gecko_dev_types
 #define gecko_evt_l2cap_coc_channel_disconnected_id                   (((uint32)gecko_dev_type_gecko)|gecko_msg_type_evt|0x04430000)
 #define gecko_evt_l2cap_coc_data_id                                   (((uint32)gecko_dev_type_gecko)|gecko_msg_type_evt|0x05430000)
 #define gecko_evt_l2cap_command_rejected_id                           (((uint32)gecko_dev_type_gecko)|gecko_msg_type_evt|0x06430000)
-#define gecko_evt_cte_receiver_iq_report_id                           (((uint32)gecko_dev_type_gecko)|gecko_msg_type_evt|0x00450000)
+#define gecko_evt_cte_receiver_connection_iq_report_id                (((uint32)gecko_dev_type_gecko)|gecko_msg_type_evt|0x00450000)
+#define gecko_evt_cte_receiver_connectionless_iq_report_id            (((uint32)gecko_dev_type_gecko)|gecko_msg_type_evt|0x01450000)
+#define gecko_evt_cte_receiver_dtm_iq_report_id                       (((uint32)gecko_dev_type_gecko)|gecko_msg_type_evt|0x02450000)
+#define gecko_evt_cte_receiver_silabs_iq_report_id                    (((uint32)gecko_dev_type_gecko)|gecko_msg_type_evt|0x03450000)
 #define gecko_evt_user_message_to_host_id                             (((uint32)gecko_dev_type_gecko)|gecko_msg_type_evt|0x00ff0000)
 
 
@@ -1280,6 +1310,25 @@ PACKSTRUCT( struct gecko_msg_le_gap_set_conn_timing_parameters_cmd_t
     uint16              max_ce_length;
 });
 PACKSTRUCT( struct gecko_msg_le_gap_set_conn_timing_parameters_rsp_t
+{
+    uint16              result;
+});
+PACKSTRUCT( struct gecko_msg_le_gap_set_advertise_random_address_cmd_t
+{
+    uint8               handle;
+    uint8               addr_type;
+    bd_addr             address;
+});
+PACKSTRUCT( struct gecko_msg_le_gap_set_advertise_random_address_rsp_t
+{
+    uint16              result;
+    bd_addr             address_out;
+});
+PACKSTRUCT( struct gecko_msg_le_gap_clear_advertise_random_address_cmd_t
+{
+    uint8               handle;
+});
+PACKSTRUCT( struct gecko_msg_le_gap_clear_advertise_random_address_rsp_t
 {
     uint16              result;
 });
@@ -1816,6 +1865,27 @@ PACKSTRUCT( struct gecko_msg_gatt_server_get_mtu_rsp_t
     uint16              result;
     uint16              mtu;
 });
+PACKSTRUCT( struct gecko_msg_gatt_server_enable_capabilities_cmd_t
+{
+    uint32              caps;
+});
+PACKSTRUCT( struct gecko_msg_gatt_server_enable_capabilities_rsp_t
+{
+    uint16              result;
+});
+PACKSTRUCT( struct gecko_msg_gatt_server_disable_capabilities_cmd_t
+{
+    uint32              caps;
+});
+PACKSTRUCT( struct gecko_msg_gatt_server_disable_capabilities_rsp_t
+{
+    uint16              result;
+});
+PACKSTRUCT( struct gecko_msg_gatt_server_get_enabled_capabilities_rsp_t
+{
+    uint16              result;
+    uint32              caps;
+});
 PACKSTRUCT( struct gecko_msg_gatt_server_attribute_value_evt_t
 {
     uint8               connection;
@@ -2201,6 +2271,14 @@ PACKSTRUCT( struct gecko_msg_homekit_broadcast_action_rsp_t
 {
     uint16              result;
 });
+PACKSTRUCT( struct gecko_msg_homekit_configure_product_data_cmd_t
+{
+    uint8array          product_data;
+});
+PACKSTRUCT( struct gecko_msg_homekit_configure_product_data_rsp_t
+{
+    uint16              result;
+});
 PACKSTRUCT( struct gecko_msg_homekit_setupcode_display_evt_t
 {
     uint8               connection;
@@ -2286,6 +2364,14 @@ PACKSTRUCT( struct gecko_msg_coex_set_parameters_cmd_t
     uint8               pwm_dutycycle;
 });
 PACKSTRUCT( struct gecko_msg_coex_set_parameters_rsp_t
+{
+    uint16              result;
+});
+PACKSTRUCT( struct gecko_msg_coex_set_directional_priority_pulse_cmd_t
+{
+    uint8               pulse;
+});
+PACKSTRUCT( struct gecko_msg_coex_set_directional_priority_pulse_rsp_t
 {
     uint16              result;
 });
@@ -2387,41 +2473,41 @@ PACKSTRUCT( struct gecko_msg_l2cap_command_rejected_evt_t
     uint8               code;
     uint16              reason;
 });
-PACKSTRUCT( struct gecko_msg_cte_transmitter_enable_cte_response_cmd_t
+PACKSTRUCT( struct gecko_msg_cte_transmitter_enable_connection_cte_cmd_t
 {
     uint8               connection;
     uint8               cte_types;
     uint8array          switching_pattern;
 });
-PACKSTRUCT( struct gecko_msg_cte_transmitter_enable_cte_response_rsp_t
+PACKSTRUCT( struct gecko_msg_cte_transmitter_enable_connection_cte_rsp_t
 {
     uint16              result;
 });
-PACKSTRUCT( struct gecko_msg_cte_transmitter_disable_cte_response_cmd_t
+PACKSTRUCT( struct gecko_msg_cte_transmitter_disable_connection_cte_cmd_t
 {
     uint8               connection;
 });
-PACKSTRUCT( struct gecko_msg_cte_transmitter_disable_cte_response_rsp_t
+PACKSTRUCT( struct gecko_msg_cte_transmitter_disable_connection_cte_rsp_t
 {
     uint16              result;
 });
-PACKSTRUCT( struct gecko_msg_cte_transmitter_start_connectionless_cte_cmd_t
+PACKSTRUCT( struct gecko_msg_cte_transmitter_enable_connectionless_cte_cmd_t
 {
-    uint8               adv;
+    uint8               handle;
     uint8               cte_length;
     uint8               cte_type;
     uint8               cte_count;
     uint8array          switching_pattern;
 });
-PACKSTRUCT( struct gecko_msg_cte_transmitter_start_connectionless_cte_rsp_t
+PACKSTRUCT( struct gecko_msg_cte_transmitter_enable_connectionless_cte_rsp_t
 {
     uint16              result;
 });
-PACKSTRUCT( struct gecko_msg_cte_transmitter_stop_connectionless_cte_cmd_t
+PACKSTRUCT( struct gecko_msg_cte_transmitter_disable_connectionless_cte_cmd_t
 {
-    uint8               adv;
+    uint8               handle;
 });
-PACKSTRUCT( struct gecko_msg_cte_transmitter_stop_connectionless_cte_rsp_t
+PACKSTRUCT( struct gecko_msg_cte_transmitter_disable_connectionless_cte_rsp_t
 {
     uint16              result;
 });
@@ -2439,6 +2525,26 @@ PACKSTRUCT( struct gecko_msg_cte_transmitter_clear_dtm_parameters_rsp_t
 {
     uint16              result;
 });
+PACKSTRUCT( struct gecko_msg_cte_transmitter_enable_silabs_cte_cmd_t
+{
+    uint8               handle;
+    uint8               cte_length;
+    uint8               cte_type;
+    uint8               cte_count;
+    uint8array          switching_pattern;
+});
+PACKSTRUCT( struct gecko_msg_cte_transmitter_enable_silabs_cte_rsp_t
+{
+    uint16              result;
+});
+PACKSTRUCT( struct gecko_msg_cte_transmitter_disable_silabs_cte_cmd_t
+{
+    uint8               handle;
+});
+PACKSTRUCT( struct gecko_msg_cte_transmitter_disable_silabs_cte_rsp_t
+{
+    uint16              result;
+});
 PACKSTRUCT( struct gecko_msg_cte_receiver_configure_cmd_t
 {
     uint8               flags;
@@ -2447,7 +2553,7 @@ PACKSTRUCT( struct gecko_msg_cte_receiver_configure_rsp_t
 {
     uint16              result;
 });
-PACKSTRUCT( struct gecko_msg_cte_receiver_start_iq_sampling_cmd_t
+PACKSTRUCT( struct gecko_msg_cte_receiver_enable_connection_cte_cmd_t
 {
     uint8               connection;
     uint16              interval;
@@ -2456,34 +2562,34 @@ PACKSTRUCT( struct gecko_msg_cte_receiver_start_iq_sampling_cmd_t
     uint8               slot_durations;
     uint8array          switching_pattern;
 });
-PACKSTRUCT( struct gecko_msg_cte_receiver_start_iq_sampling_rsp_t
+PACKSTRUCT( struct gecko_msg_cte_receiver_enable_connection_cte_rsp_t
 {
     uint16              result;
 });
-PACKSTRUCT( struct gecko_msg_cte_receiver_stop_iq_sampling_cmd_t
+PACKSTRUCT( struct gecko_msg_cte_receiver_disable_connection_cte_cmd_t
 {
     uint8               connection;
 });
-PACKSTRUCT( struct gecko_msg_cte_receiver_stop_iq_sampling_rsp_t
+PACKSTRUCT( struct gecko_msg_cte_receiver_disable_connection_cte_rsp_t
 {
     uint16              result;
 });
-PACKSTRUCT( struct gecko_msg_cte_receiver_start_connectionless_iq_sampling_cmd_t
+PACKSTRUCT( struct gecko_msg_cte_receiver_enable_connectionless_cte_cmd_t
 {
     uint8               sync;
     uint8               slot_durations;
     uint8               cte_count;
     uint8array          switching_pattern;
 });
-PACKSTRUCT( struct gecko_msg_cte_receiver_start_connectionless_iq_sampling_rsp_t
+PACKSTRUCT( struct gecko_msg_cte_receiver_enable_connectionless_cte_rsp_t
 {
     uint16              result;
 });
-PACKSTRUCT( struct gecko_msg_cte_receiver_stop_connectionless_iq_sampling_cmd_t
+PACKSTRUCT( struct gecko_msg_cte_receiver_disable_connectionless_cte_cmd_t
 {
     uint8               sync;
 });
-PACKSTRUCT( struct gecko_msg_cte_receiver_stop_connectionless_iq_sampling_rsp_t
+PACKSTRUCT( struct gecko_msg_cte_receiver_disable_connectionless_cte_rsp_t
 {
     uint16              result;
 });
@@ -2502,11 +2608,24 @@ PACKSTRUCT( struct gecko_msg_cte_receiver_clear_dtm_parameters_rsp_t
 {
     uint16              result;
 });
-PACKSTRUCT( struct gecko_msg_cte_receiver_iq_report_evt_t
+PACKSTRUCT( struct gecko_msg_cte_receiver_enable_silabs_cte_cmd_t
+{
+    uint8               slot_durations;
+    uint8               cte_count;
+    uint8array          switching_pattern;
+});
+PACKSTRUCT( struct gecko_msg_cte_receiver_enable_silabs_cte_rsp_t
+{
+    uint16              result;
+});
+PACKSTRUCT( struct gecko_msg_cte_receiver_disable_silabs_cte_rsp_t
+{
+    uint16              result;
+});
+PACKSTRUCT( struct gecko_msg_cte_receiver_connection_iq_report_evt_t
 {
     uint16              status;
-    uint8               packet_type;
-    uint8               handle;
+    uint8               connection;
     uint8               phy;
     uint8               channel;
     int8                rssi;
@@ -2514,7 +2633,43 @@ PACKSTRUCT( struct gecko_msg_cte_receiver_iq_report_evt_t
     uint8               cte_type;
     uint8               slot_durations;
     uint16              event_counter;
-    uint8               completeness;
+    uint8array          samples;
+});
+PACKSTRUCT( struct gecko_msg_cte_receiver_connectionless_iq_report_evt_t
+{
+    uint16              status;
+    uint8               sync;
+    uint8               channel;
+    int8                rssi;
+    uint8               rssi_antenna_id;
+    uint8               cte_type;
+    uint8               slot_durations;
+    uint16              event_counter;
+    uint8array          samples;
+});
+PACKSTRUCT( struct gecko_msg_cte_receiver_dtm_iq_report_evt_t
+{
+    uint16              status;
+    uint8               channel;
+    int8                rssi;
+    uint8               rssi_antenna_id;
+    uint8               cte_type;
+    uint8               slot_durations;
+    uint16              event_counter;
+    uint8array          samples;
+});
+PACKSTRUCT( struct gecko_msg_cte_receiver_silabs_iq_report_evt_t
+{
+    uint16              status;
+    bd_addr             address;
+    uint8               address_type;
+    uint8               phy;
+    uint8               channel;
+    int8                rssi;
+    uint8               rssi_antenna_id;
+    uint8               cte_type;
+    uint8               slot_durations;
+    uint16              packet_counter;
     uint8array          samples;
 });
 PACKSTRUCT( struct gecko_msg_user_message_to_target_cmd_t
@@ -2643,6 +2798,10 @@ union{
     struct gecko_msg_le_gap_enable_whitelisting_rsp_t            rsp_le_gap_enable_whitelisting;
     struct gecko_msg_le_gap_set_conn_timing_parameters_cmd_t     cmd_le_gap_set_conn_timing_parameters;
     struct gecko_msg_le_gap_set_conn_timing_parameters_rsp_t     rsp_le_gap_set_conn_timing_parameters;
+    struct gecko_msg_le_gap_set_advertise_random_address_cmd_t   cmd_le_gap_set_advertise_random_address;
+    struct gecko_msg_le_gap_set_advertise_random_address_rsp_t   rsp_le_gap_set_advertise_random_address;
+    struct gecko_msg_le_gap_clear_advertise_random_address_cmd_t cmd_le_gap_clear_advertise_random_address;
+    struct gecko_msg_le_gap_clear_advertise_random_address_rsp_t rsp_le_gap_clear_advertise_random_address;
     struct gecko_msg_le_gap_scan_response_evt_t                  evt_le_gap_scan_response;
     struct gecko_msg_le_gap_adv_timeout_evt_t                    evt_le_gap_adv_timeout;
     struct gecko_msg_le_gap_scan_request_evt_t                   evt_le_gap_scan_request;
@@ -2743,6 +2902,11 @@ union{
     struct gecko_msg_gatt_server_set_max_mtu_rsp_t               rsp_gatt_server_set_max_mtu;
     struct gecko_msg_gatt_server_get_mtu_cmd_t                   cmd_gatt_server_get_mtu;
     struct gecko_msg_gatt_server_get_mtu_rsp_t                   rsp_gatt_server_get_mtu;
+    struct gecko_msg_gatt_server_enable_capabilities_cmd_t       cmd_gatt_server_enable_capabilities;
+    struct gecko_msg_gatt_server_enable_capabilities_rsp_t       rsp_gatt_server_enable_capabilities;
+    struct gecko_msg_gatt_server_disable_capabilities_cmd_t      cmd_gatt_server_disable_capabilities;
+    struct gecko_msg_gatt_server_disable_capabilities_rsp_t      rsp_gatt_server_disable_capabilities;
+    struct gecko_msg_gatt_server_get_enabled_capabilities_rsp_t  rsp_gatt_server_get_enabled_capabilities;
     struct gecko_msg_gatt_server_attribute_value_evt_t           evt_gatt_server_attribute_value;
     struct gecko_msg_gatt_server_user_read_request_evt_t         evt_gatt_server_user_read_request;
     struct gecko_msg_gatt_server_user_write_request_evt_t        evt_gatt_server_user_write_request;
@@ -2823,6 +2987,8 @@ union{
     struct gecko_msg_homekit_event_notification_rsp_t            rsp_homekit_event_notification;
     struct gecko_msg_homekit_broadcast_action_cmd_t              cmd_homekit_broadcast_action;
     struct gecko_msg_homekit_broadcast_action_rsp_t              rsp_homekit_broadcast_action;
+    struct gecko_msg_homekit_configure_product_data_cmd_t        cmd_homekit_configure_product_data;
+    struct gecko_msg_homekit_configure_product_data_rsp_t        rsp_homekit_configure_product_data;
     struct gecko_msg_homekit_setupcode_display_evt_t             evt_homekit_setupcode_display;
     struct gecko_msg_homekit_paired_evt_t                        evt_homekit_paired;
     struct gecko_msg_homekit_pair_verified_evt_t                 evt_homekit_pair_verified;
@@ -2840,6 +3006,8 @@ union{
     struct gecko_msg_coex_get_counters_rsp_t                     rsp_coex_get_counters;
     struct gecko_msg_coex_set_parameters_cmd_t                   cmd_coex_set_parameters;
     struct gecko_msg_coex_set_parameters_rsp_t                   rsp_coex_set_parameters;
+    struct gecko_msg_coex_set_directional_priority_pulse_cmd_t   cmd_coex_set_directional_priority_pulse;
+    struct gecko_msg_coex_set_directional_priority_pulse_rsp_t   rsp_coex_set_directional_priority_pulse;
     struct gecko_msg_l2cap_coc_send_connection_request_cmd_t     cmd_l2cap_coc_send_connection_request;
     struct gecko_msg_l2cap_coc_send_connection_request_rsp_t     rsp_l2cap_coc_send_connection_request;
     struct gecko_msg_l2cap_coc_send_connection_response_cmd_t    cmd_l2cap_coc_send_connection_response;
@@ -2856,31 +3024,41 @@ union{
     struct gecko_msg_l2cap_coc_channel_disconnected_evt_t        evt_l2cap_coc_channel_disconnected;
     struct gecko_msg_l2cap_coc_data_evt_t                        evt_l2cap_coc_data;
     struct gecko_msg_l2cap_command_rejected_evt_t                evt_l2cap_command_rejected;
-    struct gecko_msg_cte_transmitter_enable_cte_response_cmd_t   cmd_cte_transmitter_enable_cte_response;
-    struct gecko_msg_cte_transmitter_enable_cte_response_rsp_t   rsp_cte_transmitter_enable_cte_response;
-    struct gecko_msg_cte_transmitter_disable_cte_response_cmd_t  cmd_cte_transmitter_disable_cte_response;
-    struct gecko_msg_cte_transmitter_disable_cte_response_rsp_t  rsp_cte_transmitter_disable_cte_response;
-    struct gecko_msg_cte_transmitter_start_connectionless_cte_cmd_t cmd_cte_transmitter_start_connectionless_cte;
-    struct gecko_msg_cte_transmitter_start_connectionless_cte_rsp_t rsp_cte_transmitter_start_connectionless_cte;
-    struct gecko_msg_cte_transmitter_stop_connectionless_cte_cmd_t cmd_cte_transmitter_stop_connectionless_cte;
-    struct gecko_msg_cte_transmitter_stop_connectionless_cte_rsp_t rsp_cte_transmitter_stop_connectionless_cte;
+    struct gecko_msg_cte_transmitter_enable_connection_cte_cmd_t cmd_cte_transmitter_enable_connection_cte;
+    struct gecko_msg_cte_transmitter_enable_connection_cte_rsp_t rsp_cte_transmitter_enable_connection_cte;
+    struct gecko_msg_cte_transmitter_disable_connection_cte_cmd_t cmd_cte_transmitter_disable_connection_cte;
+    struct gecko_msg_cte_transmitter_disable_connection_cte_rsp_t rsp_cte_transmitter_disable_connection_cte;
+    struct gecko_msg_cte_transmitter_enable_connectionless_cte_cmd_t cmd_cte_transmitter_enable_connectionless_cte;
+    struct gecko_msg_cte_transmitter_enable_connectionless_cte_rsp_t rsp_cte_transmitter_enable_connectionless_cte;
+    struct gecko_msg_cte_transmitter_disable_connectionless_cte_cmd_t cmd_cte_transmitter_disable_connectionless_cte;
+    struct gecko_msg_cte_transmitter_disable_connectionless_cte_rsp_t rsp_cte_transmitter_disable_connectionless_cte;
     struct gecko_msg_cte_transmitter_set_dtm_parameters_cmd_t    cmd_cte_transmitter_set_dtm_parameters;
     struct gecko_msg_cte_transmitter_set_dtm_parameters_rsp_t    rsp_cte_transmitter_set_dtm_parameters;
     struct gecko_msg_cte_transmitter_clear_dtm_parameters_rsp_t  rsp_cte_transmitter_clear_dtm_parameters;
+    struct gecko_msg_cte_transmitter_enable_silabs_cte_cmd_t     cmd_cte_transmitter_enable_silabs_cte;
+    struct gecko_msg_cte_transmitter_enable_silabs_cte_rsp_t     rsp_cte_transmitter_enable_silabs_cte;
+    struct gecko_msg_cte_transmitter_disable_silabs_cte_cmd_t    cmd_cte_transmitter_disable_silabs_cte;
+    struct gecko_msg_cte_transmitter_disable_silabs_cte_rsp_t    rsp_cte_transmitter_disable_silabs_cte;
     struct gecko_msg_cte_receiver_configure_cmd_t                cmd_cte_receiver_configure;
     struct gecko_msg_cte_receiver_configure_rsp_t                rsp_cte_receiver_configure;
-    struct gecko_msg_cte_receiver_start_iq_sampling_cmd_t        cmd_cte_receiver_start_iq_sampling;
-    struct gecko_msg_cte_receiver_start_iq_sampling_rsp_t        rsp_cte_receiver_start_iq_sampling;
-    struct gecko_msg_cte_receiver_stop_iq_sampling_cmd_t         cmd_cte_receiver_stop_iq_sampling;
-    struct gecko_msg_cte_receiver_stop_iq_sampling_rsp_t         rsp_cte_receiver_stop_iq_sampling;
-    struct gecko_msg_cte_receiver_start_connectionless_iq_sampling_cmd_t cmd_cte_receiver_start_connectionless_iq_sampling;
-    struct gecko_msg_cte_receiver_start_connectionless_iq_sampling_rsp_t rsp_cte_receiver_start_connectionless_iq_sampling;
-    struct gecko_msg_cte_receiver_stop_connectionless_iq_sampling_cmd_t cmd_cte_receiver_stop_connectionless_iq_sampling;
-    struct gecko_msg_cte_receiver_stop_connectionless_iq_sampling_rsp_t rsp_cte_receiver_stop_connectionless_iq_sampling;
+    struct gecko_msg_cte_receiver_enable_connection_cte_cmd_t    cmd_cte_receiver_enable_connection_cte;
+    struct gecko_msg_cte_receiver_enable_connection_cte_rsp_t    rsp_cte_receiver_enable_connection_cte;
+    struct gecko_msg_cte_receiver_disable_connection_cte_cmd_t   cmd_cte_receiver_disable_connection_cte;
+    struct gecko_msg_cte_receiver_disable_connection_cte_rsp_t   rsp_cte_receiver_disable_connection_cte;
+    struct gecko_msg_cte_receiver_enable_connectionless_cte_cmd_t cmd_cte_receiver_enable_connectionless_cte;
+    struct gecko_msg_cte_receiver_enable_connectionless_cte_rsp_t rsp_cte_receiver_enable_connectionless_cte;
+    struct gecko_msg_cte_receiver_disable_connectionless_cte_cmd_t cmd_cte_receiver_disable_connectionless_cte;
+    struct gecko_msg_cte_receiver_disable_connectionless_cte_rsp_t rsp_cte_receiver_disable_connectionless_cte;
     struct gecko_msg_cte_receiver_set_dtm_parameters_cmd_t       cmd_cte_receiver_set_dtm_parameters;
     struct gecko_msg_cte_receiver_set_dtm_parameters_rsp_t       rsp_cte_receiver_set_dtm_parameters;
     struct gecko_msg_cte_receiver_clear_dtm_parameters_rsp_t     rsp_cte_receiver_clear_dtm_parameters;
-    struct gecko_msg_cte_receiver_iq_report_evt_t                evt_cte_receiver_iq_report;
+    struct gecko_msg_cte_receiver_enable_silabs_cte_cmd_t        cmd_cte_receiver_enable_silabs_cte;
+    struct gecko_msg_cte_receiver_enable_silabs_cte_rsp_t        rsp_cte_receiver_enable_silabs_cte;
+    struct gecko_msg_cte_receiver_disable_silabs_cte_rsp_t       rsp_cte_receiver_disable_silabs_cte;
+    struct gecko_msg_cte_receiver_connection_iq_report_evt_t     evt_cte_receiver_connection_iq_report;
+    struct gecko_msg_cte_receiver_connectionless_iq_report_evt_t evt_cte_receiver_connectionless_iq_report;
+    struct gecko_msg_cte_receiver_dtm_iq_report_evt_t            evt_cte_receiver_dtm_iq_report;
+    struct gecko_msg_cte_receiver_silabs_iq_report_evt_t         evt_cte_receiver_silabs_iq_report;
     struct gecko_msg_user_message_to_target_cmd_t                cmd_user_message_to_target;
     struct gecko_msg_user_message_to_target_rsp_t                rsp_user_message_to_target;
     struct gecko_msg_user_message_to_host_evt_t                  evt_user_message_to_host;
@@ -3093,6 +3271,8 @@ void sli_bt_cmd_le_gap_stop_periodic_advertising(const void*);
 void sli_bt_cmd_le_gap_set_long_advertising_data(const void*);
 void sli_bt_cmd_le_gap_enable_whitelisting(const void*);
 void sli_bt_cmd_le_gap_set_conn_timing_parameters(const void*);
+void sli_bt_cmd_le_gap_set_advertise_random_address(const void*);
+void sli_bt_cmd_le_gap_clear_advertise_random_address(const void*);
 void sli_bt_cmd_sync_open(const void*);
 void sli_bt_cmd_sync_close(const void*);
 void sli_bt_cmd_le_connection_set_parameters(const void*);
@@ -3133,6 +3313,9 @@ void sli_bt_cmd_gatt_server_find_attribute(const void*);
 void sli_bt_cmd_gatt_server_set_capabilities(const void*);
 void sli_bt_cmd_gatt_server_set_max_mtu(const void*);
 void sli_bt_cmd_gatt_server_get_mtu(const void*);
+void sli_bt_cmd_gatt_server_enable_capabilities(const void*);
+void sli_bt_cmd_gatt_server_disable_capabilities(const void*);
+void sli_bt_cmd_gatt_server_get_enabled_capabilities(const void*);
 void sli_bt_cmd_hardware_set_soft_timer(const void*);
 void sli_bt_cmd_hardware_get_time(const void*);
 void sli_bt_cmd_hardware_set_lazy_soft_timer(const void*);
@@ -3170,27 +3353,33 @@ void sli_bt_cmd_homekit_send_read_response(const void*);
 void sli_bt_cmd_homekit_gsn_action(const void*);
 void sli_bt_cmd_homekit_event_notification(const void*);
 void sli_bt_cmd_homekit_broadcast_action(const void*);
+void sli_bt_cmd_homekit_configure_product_data(const void*);
 void sli_bt_cmd_coex_set_options(const void*);
 void sli_bt_cmd_coex_get_counters(const void*);
 void sli_bt_cmd_coex_set_parameters(const void*);
+void sli_bt_cmd_coex_set_directional_priority_pulse(const void*);
 void sli_bt_cmd_l2cap_coc_send_connection_request(const void*);
 void sli_bt_cmd_l2cap_coc_send_connection_response(const void*);
 void sli_bt_cmd_l2cap_coc_send_le_flow_control_credit(const void*);
 void sli_bt_cmd_l2cap_coc_send_disconnection_request(const void*);
 void sli_bt_cmd_l2cap_coc_send_data(const void*);
-void sli_bt_cmd_cte_transmitter_enable_cte_response(const void*);
-void sli_bt_cmd_cte_transmitter_disable_cte_response(const void*);
-void sli_bt_cmd_cte_transmitter_start_connectionless_cte(const void*);
-void sli_bt_cmd_cte_transmitter_stop_connectionless_cte(const void*);
+void sli_bt_cmd_cte_transmitter_enable_connection_cte(const void*);
+void sli_bt_cmd_cte_transmitter_disable_connection_cte(const void*);
+void sli_bt_cmd_cte_transmitter_enable_connectionless_cte(const void*);
+void sli_bt_cmd_cte_transmitter_disable_connectionless_cte(const void*);
 void sli_bt_cmd_cte_transmitter_set_dtm_parameters(const void*);
 void sli_bt_cmd_cte_transmitter_clear_dtm_parameters(const void*);
+void sli_bt_cmd_cte_transmitter_enable_silabs_cte(const void*);
+void sli_bt_cmd_cte_transmitter_disable_silabs_cte(const void*);
 void sli_bt_cmd_cte_receiver_configure(const void*);
-void sli_bt_cmd_cte_receiver_start_iq_sampling(const void*);
-void sli_bt_cmd_cte_receiver_stop_iq_sampling(const void*);
-void sli_bt_cmd_cte_receiver_start_connectionless_iq_sampling(const void*);
-void sli_bt_cmd_cte_receiver_stop_connectionless_iq_sampling(const void*);
+void sli_bt_cmd_cte_receiver_enable_connection_cte(const void*);
+void sli_bt_cmd_cte_receiver_disable_connection_cte(const void*);
+void sli_bt_cmd_cte_receiver_enable_connectionless_cte(const void*);
+void sli_bt_cmd_cte_receiver_disable_connectionless_cte(const void*);
 void sli_bt_cmd_cte_receiver_set_dtm_parameters(const void*);
-void sli_bt_cmd_cte_receiver_clear_dtm_parameters(const void*);typedef void (*gecko_cmd_handler)(const void*);
+void sli_bt_cmd_cte_receiver_clear_dtm_parameters(const void*);
+void sli_bt_cmd_cte_receiver_enable_silabs_cte(const void*);
+void sli_bt_cmd_cte_receiver_disable_silabs_cte(const void*);typedef void (*gecko_cmd_handler)(const void*);
 void sli_bt_cmd_handler_delegate(uint32_t header, gecko_cmd_handler, const void*);
 void sli_bt_cmd_handler_rtos_delegate(uint32_t header, gecko_cmd_handler, const void*);
 
@@ -3517,11 +3706,10 @@ static inline struct gecko_msg_system_halt_rsp_t* gecko_cmd_system_halt(uint8 ha
 *
 * gecko_cmd_system_set_device_name
 *
-* Set the device name which will be used in application mode or during the OTA
-* update. The name will be stored in the persistent store. If the OTA device
-* name is also set in the stack configuration, the name stored in the persistent
-* store is overwritten by the name in the stack configuration during the device
-* boot. 
+* Set the device name which will be used during the OTA update. The name will be
+* stored in the persistent store. If the OTA device name is also set in the
+* stack configuration, the name stored in the persistent store is overwritten by
+* the name in the stack configuration during the device boot. 
 *
 * @param type   Device name to set. Values:
 *  
@@ -3647,10 +3835,10 @@ static inline struct gecko_msg_system_data_buffer_write_rsp_t* gecko_cmd_system_
 * gecko_cmd_system_set_identity_address
 *
 * Set the device's Bluetooth identity address. The address can be a public
-* device address or a random static device address. A valid address set with
-* this command will be written into persistent storage using PS keys. The stack
-* checks whether a random static address conforms to the Bluetooth
-* specification. If it does not, it returns an error.
+* device address or a static device address. A valid address set with this
+* command will be written into persistent storage using PS keys. The stack
+* returns an error if the static device address does not conform to the
+* Bluetooth specification.
 * 
 * The new address will be effective in the next system reboot. The stack will
 * use the address in the PS keys when present. Otherwise, it uses the default
@@ -3667,7 +3855,7 @@ static inline struct gecko_msg_system_data_buffer_write_rsp_t* gecko_cmd_system_
 * @param type   Address type
 *  
 *      0: Public device address  
-*      1: Static random address
+*      1: Static device address
 *
 **/
 
@@ -5264,6 +5452,85 @@ static inline struct gecko_msg_le_gap_set_conn_timing_parameters_rsp_t* gecko_cm
 
 /** 
 *
+* gecko_cmd_le_gap_set_advertise_random_address
+*
+* Set the advertiser on an advertising set to use a random address. This
+* overrides the default advertiser address which is either the public device
+* address programmed at production or the address written into persistent
+* storage using system_set_identity_address command. This setting is stored in
+* RAM only and does not change the identity address in persistent storage.
+* 
+* When setting a resolvable random address, the address parameter is ignored.
+* The stack generates a private resolvable random address and set it as the
+* advertiser address. The generated address is returned in the response.
+* 
+* To use the default advertiser address, remove this setting using
+* le_gap_clear_advertise_random_address command.
+* 
+* Wrong state error is returned if advertising has been enabled on the
+* advertising set. Invalid parameter error is returned if the advertising set
+* handle is invalid or the address does not conforms to the Bluetooth
+* specification. 
+*
+* @param handle   Advertising set handle
+* @param addr_type   Address type:
+*  
+*      1: Static device address  
+*      2: Private resolvable random address  
+*      3: Private non-resolvable random address. This type can only be used for
+*      non-connectable advertising.
+* @param address   The random address to set. Ignore this field when setting a resolvable random
+*  address.
+*
+**/
+
+static inline struct gecko_msg_le_gap_set_advertise_random_address_rsp_t* gecko_cmd_le_gap_set_advertise_random_address(uint8 handle,uint8 addr_type,bd_addr address)
+{
+    struct gecko_cmd_packet *gecko_cmd_msg = (struct gecko_cmd_packet *)gecko_cmd_msg_buf;
+    struct gecko_cmd_packet *gecko_rsp_msg = (struct gecko_cmd_packet *)gecko_rsp_msg_buf;
+    
+    gecko_cmd_msg->data.cmd_le_gap_set_advertise_random_address.handle=handle;
+    gecko_cmd_msg->data.cmd_le_gap_set_advertise_random_address.addr_type=addr_type;
+    memcpy(&gecko_cmd_msg->data.cmd_le_gap_set_advertise_random_address.address,&address,sizeof(bd_addr));
+    gecko_cmd_msg->header=(gecko_cmd_le_gap_set_advertise_random_address_id+(((8)&0xff)<<8)+(((8)&0x700)>>8));
+    
+    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_le_gap_set_advertise_random_address, &gecko_cmd_msg->data.payload);
+    
+    return &gecko_rsp_msg->data.rsp_le_gap_set_advertise_random_address;
+}
+
+/** 
+*
+* gecko_cmd_le_gap_clear_advertise_random_address
+*
+* Clear the random address previously set for the advertiser address on an
+* advertising set. A random address can be set using
+* le_gap_set_advertise_random_address command. The default advertiser address
+* will be used after this operation.
+* 
+* Wrong state error is returned if advertising has been enabled on the
+* advertising set. Invalid parameter error is returned if the advertising set
+* handle is invalid. 
+*
+* @param handle   Advertising set handle
+*
+**/
+
+static inline struct gecko_msg_le_gap_clear_advertise_random_address_rsp_t* gecko_cmd_le_gap_clear_advertise_random_address(uint8 handle)
+{
+    struct gecko_cmd_packet *gecko_cmd_msg = (struct gecko_cmd_packet *)gecko_cmd_msg_buf;
+    struct gecko_cmd_packet *gecko_rsp_msg = (struct gecko_cmd_packet *)gecko_rsp_msg_buf;
+    
+    gecko_cmd_msg->data.cmd_le_gap_clear_advertise_random_address.handle=handle;
+    gecko_cmd_msg->header=(gecko_cmd_le_gap_clear_advertise_random_address_id+(((1)&0xff)<<8)+(((1)&0x700)>>8));
+    
+    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_le_gap_clear_advertise_random_address, &gecko_cmd_msg->data.payload);
+    
+    return &gecko_rsp_msg->data.rsp_le_gap_clear_advertise_random_address;
+}
+
+/** 
+*
 * gecko_cmd_sync_open
 *
 * Establish a synchronization with a periodic advertising from the specified
@@ -6727,7 +6994,7 @@ static inline struct gecko_msg_gatt_server_send_characteristic_notification_rsp_
 *
 * @param start   Search start handle
 * @param type_len   Array length
-* @param type_data   
+* @param type_data   The attribute type UUID
 *
 **/
 
@@ -6756,9 +7023,9 @@ static inline struct gecko_msg_gatt_server_find_attribute_rsp_t* gecko_cmd_gatt_
 *
 * gecko_cmd_gatt_server_set_capabilities
 *
-* Set which capabilities should be enabled in the local GATT database. A service
-* is visible to remote GATT clients if at least one of its capabilities was
-* enabled. The same applies to a characteristic and its attributes. Capability
+* Reset capabilities that should be enabled by the GATT database. A service is
+* visible to remote GATT clients if at least one of its capabilities is enabled.
+* The same applies to a characteristic and its attributes. Capability
 * identifiers and their corresponding bit flag values can be found in the auto-
 * generated database header file. See UG118: Blue Gecko Bluetooth Profile
 * Toolkit Developer's Guide for how to declare capabilities in the GATT
@@ -6771,7 +7038,7 @@ static inline struct gecko_msg_gatt_server_find_attribute_rsp_t* gecko_cmd_gatt_
 * manage service changed indications for a GATT client that has enabled the
 * indication configuration of the Service Changed characteristic. 
 *
-* @param caps   Bit flags of capabilities to enable. Value 0 sets the default database
+* @param caps   Bit flags of capabilities to reset. Value 0 sets the default database
 *  capabilities.
 * @param reserved   Use the value 0 on this reserved field. Do not use none-zero values because
 *  they are reserved for future use.
@@ -6846,6 +7113,76 @@ static inline struct gecko_msg_gatt_server_get_mtu_rsp_t* gecko_cmd_gatt_server_
     sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_gatt_server_get_mtu, &gecko_cmd_msg->data.payload);
     
     return &gecko_rsp_msg->data.rsp_gatt_server_get_mtu;
+}
+
+/** 
+*
+* gecko_cmd_gatt_server_enable_capabilities
+*
+* Enable additional capabilities in the local GATT database. Already enabled
+* capabilities keep unchanged after this command. See
+* gatt_server_set_capabilities for more formation. 
+*
+* @param caps   Capabilities to enable
+*
+**/
+
+static inline struct gecko_msg_gatt_server_enable_capabilities_rsp_t* gecko_cmd_gatt_server_enable_capabilities(uint32 caps)
+{
+    struct gecko_cmd_packet *gecko_cmd_msg = (struct gecko_cmd_packet *)gecko_cmd_msg_buf;
+    struct gecko_cmd_packet *gecko_rsp_msg = (struct gecko_cmd_packet *)gecko_rsp_msg_buf;
+    
+    gecko_cmd_msg->data.cmd_gatt_server_enable_capabilities.caps=caps;
+    gecko_cmd_msg->header=(gecko_cmd_gatt_server_enable_capabilities_id+(((4)&0xff)<<8)+(((4)&0x700)>>8));
+    
+    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_gatt_server_enable_capabilities, &gecko_cmd_msg->data.payload);
+    
+    return &gecko_rsp_msg->data.rsp_gatt_server_enable_capabilities;
+}
+
+/** 
+*
+* gecko_cmd_gatt_server_disable_capabilities
+*
+* Disable the given capabilities in the local GATT database. See
+* gatt_server_set_capabilities for more formation. 
+*
+* @param caps   Capabilities to disable
+*
+**/
+
+static inline struct gecko_msg_gatt_server_disable_capabilities_rsp_t* gecko_cmd_gatt_server_disable_capabilities(uint32 caps)
+{
+    struct gecko_cmd_packet *gecko_cmd_msg = (struct gecko_cmd_packet *)gecko_cmd_msg_buf;
+    struct gecko_cmd_packet *gecko_rsp_msg = (struct gecko_cmd_packet *)gecko_rsp_msg_buf;
+    
+    gecko_cmd_msg->data.cmd_gatt_server_disable_capabilities.caps=caps;
+    gecko_cmd_msg->header=(gecko_cmd_gatt_server_disable_capabilities_id+(((4)&0xff)<<8)+(((4)&0x700)>>8));
+    
+    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_gatt_server_disable_capabilities, &gecko_cmd_msg->data.payload);
+    
+    return &gecko_rsp_msg->data.rsp_gatt_server_disable_capabilities;
+}
+
+/** 
+*
+* gecko_cmd_gatt_server_get_enabled_capabilities
+*
+* Get capabilities currently enabled in the local GATT database. 
+*
+*
+**/
+
+static inline struct gecko_msg_gatt_server_get_enabled_capabilities_rsp_t* gecko_cmd_gatt_server_get_enabled_capabilities()
+{
+    struct gecko_cmd_packet *gecko_cmd_msg = (struct gecko_cmd_packet *)gecko_cmd_msg_buf;
+    struct gecko_cmd_packet *gecko_rsp_msg = (struct gecko_cmd_packet *)gecko_rsp_msg_buf;
+    
+    gecko_cmd_msg->header=(gecko_cmd_gatt_server_get_enabled_capabilities_id+(((0)&0xff)<<8)+(((0)&0x700)>>8));
+    
+    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_gatt_server_get_enabled_capabilities, &gecko_cmd_msg->data.payload);
+    
+    return &gecko_rsp_msg->data.rsp_gatt_server_get_enabled_capabilities;
 }
 
 /** 
@@ -7758,7 +8095,7 @@ static inline struct gecko_msg_sm_set_minimum_key_size_rsp_t* gecko_cmd_sm_set_m
 *  
 *      Time = Value x 100 ms
 * @param model_name_len   Array length
-* @param model_name_data   Model name characteristic value from HomeKit Accessory Information service.
+* @param model_name_data   Model Name characteristic value from HomeKit Accessory Information service.
 *  Mandatory for HomeKit software authentication usage.
 *
 **/
@@ -8093,6 +8430,39 @@ static inline struct gecko_msg_homekit_broadcast_action_rsp_t* gecko_cmd_homekit
 
 /** 
 *
+* gecko_cmd_homekit_configure_product_data
+*
+* Configure the Apple HomeKit library. This is additional configuration
+* introduced in HAP revision R15. 
+*
+* @param product_data_len   Array length
+* @param product_data_data   Product Data characteristic value from HomeKit Accessory Information service.
+*  Mandatory (HAP revision R15 and later).
+*
+**/
+
+static inline struct gecko_msg_homekit_configure_product_data_rsp_t* gecko_cmd_homekit_configure_product_data(uint8 product_data_len, const uint8* product_data_data)
+{
+    struct gecko_cmd_packet *gecko_cmd_msg = (struct gecko_cmd_packet *)gecko_cmd_msg_buf;
+    struct gecko_cmd_packet *gecko_rsp_msg = (struct gecko_cmd_packet *)gecko_rsp_msg_buf;
+    if ((uint16_t)product_data_len > 256 - 1)
+    {
+        gecko_rsp_msg->data.rsp_homekit_configure_product_data.result = bg_err_command_too_long;
+        return &gecko_rsp_msg->data.rsp_homekit_configure_product_data;
+    }
+
+    
+    gecko_cmd_msg->data.cmd_homekit_configure_product_data.product_data.len=product_data_len;
+    memcpy(gecko_cmd_msg->data.cmd_homekit_configure_product_data.product_data.data,product_data_data,product_data_len);
+    gecko_cmd_msg->header=(gecko_cmd_homekit_configure_product_data_id+(((1+product_data_len)&0xff)<<8)+(((1+product_data_len)&0x700)>>8));
+    
+    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_homekit_configure_product_data, &gecko_cmd_msg->data.payload);
+    
+    return &gecko_rsp_msg->data.rsp_homekit_configure_product_data;
+}
+
+/** 
+*
 * gecko_cmd_coex_set_options
 *
 * Configure coexistence options at runtime. 
@@ -8173,6 +8543,29 @@ static inline struct gecko_msg_coex_set_parameters_rsp_t* gecko_cmd_coex_set_par
     sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_coex_set_parameters, &gecko_cmd_msg->data.payload);
     
     return &gecko_rsp_msg->data.rsp_coex_set_parameters;
+}
+
+/** 
+*
+* gecko_cmd_coex_set_directional_priority_pulse
+*
+* Set Directional Priority Pulse Width 
+*
+* @param pulse   Directional priority pulse width in us
+*
+**/
+
+static inline struct gecko_msg_coex_set_directional_priority_pulse_rsp_t* gecko_cmd_coex_set_directional_priority_pulse(uint8 pulse)
+{
+    struct gecko_cmd_packet *gecko_cmd_msg = (struct gecko_cmd_packet *)gecko_cmd_msg_buf;
+    struct gecko_cmd_packet *gecko_rsp_msg = (struct gecko_cmd_packet *)gecko_rsp_msg_buf;
+    
+    gecko_cmd_msg->data.cmd_coex_set_directional_priority_pulse.pulse=pulse;
+    gecko_cmd_msg->header=(gecko_cmd_coex_set_directional_priority_pulse_id+(((1)&0xff)<<8)+(((1)&0x700)>>8));
+    
+    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_coex_set_directional_priority_pulse, &gecko_cmd_msg->data.payload);
+    
+    return &gecko_rsp_msg->data.rsp_coex_set_directional_priority_pulse;
 }
 
 /** 
@@ -8373,7 +8766,7 @@ static inline struct gecko_msg_l2cap_coc_send_data_rsp_t* gecko_cmd_l2cap_coc_se
 
 /** 
 *
-* gecko_cmd_cte_transmitter_enable_cte_response
+* gecko_cmd_cte_transmitter_enable_connection_cte
 *
 * Enable different types of CTE responses on a connection. CTE response will be
 * sent once requested by the peer device using the CTE Request procedure. 
@@ -8391,31 +8784,31 @@ static inline struct gecko_msg_l2cap_coc_send_data_rsp_t* gecko_cmd_l2cap_coc_se
 *
 **/
 
-static inline struct gecko_msg_cte_transmitter_enable_cte_response_rsp_t* gecko_cmd_cte_transmitter_enable_cte_response(uint8 connection,uint8 cte_types,uint8 switching_pattern_len, const uint8* switching_pattern_data)
+static inline struct gecko_msg_cte_transmitter_enable_connection_cte_rsp_t* gecko_cmd_cte_transmitter_enable_connection_cte(uint8 connection,uint8 cte_types,uint8 switching_pattern_len, const uint8* switching_pattern_data)
 {
     struct gecko_cmd_packet *gecko_cmd_msg = (struct gecko_cmd_packet *)gecko_cmd_msg_buf;
     struct gecko_cmd_packet *gecko_rsp_msg = (struct gecko_cmd_packet *)gecko_rsp_msg_buf;
     if ((uint16_t)switching_pattern_len > 256 - 3)
     {
-        gecko_rsp_msg->data.rsp_cte_transmitter_enable_cte_response.result = bg_err_command_too_long;
-        return &gecko_rsp_msg->data.rsp_cte_transmitter_enable_cte_response;
+        gecko_rsp_msg->data.rsp_cte_transmitter_enable_connection_cte.result = bg_err_command_too_long;
+        return &gecko_rsp_msg->data.rsp_cte_transmitter_enable_connection_cte;
     }
 
     
-    gecko_cmd_msg->data.cmd_cte_transmitter_enable_cte_response.connection=connection;
-    gecko_cmd_msg->data.cmd_cte_transmitter_enable_cte_response.cte_types=cte_types;
-    gecko_cmd_msg->data.cmd_cte_transmitter_enable_cte_response.switching_pattern.len=switching_pattern_len;
-    memcpy(gecko_cmd_msg->data.cmd_cte_transmitter_enable_cte_response.switching_pattern.data,switching_pattern_data,switching_pattern_len);
-    gecko_cmd_msg->header=(gecko_cmd_cte_transmitter_enable_cte_response_id+(((3+switching_pattern_len)&0xff)<<8)+(((3+switching_pattern_len)&0x700)>>8));
+    gecko_cmd_msg->data.cmd_cte_transmitter_enable_connection_cte.connection=connection;
+    gecko_cmd_msg->data.cmd_cte_transmitter_enable_connection_cte.cte_types=cte_types;
+    gecko_cmd_msg->data.cmd_cte_transmitter_enable_connection_cte.switching_pattern.len=switching_pattern_len;
+    memcpy(gecko_cmd_msg->data.cmd_cte_transmitter_enable_connection_cte.switching_pattern.data,switching_pattern_data,switching_pattern_len);
+    gecko_cmd_msg->header=(gecko_cmd_cte_transmitter_enable_connection_cte_id+(((3+switching_pattern_len)&0xff)<<8)+(((3+switching_pattern_len)&0x700)>>8));
     
-    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_cte_transmitter_enable_cte_response, &gecko_cmd_msg->data.payload);
+    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_cte_transmitter_enable_connection_cte, &gecko_cmd_msg->data.payload);
     
-    return &gecko_rsp_msg->data.rsp_cte_transmitter_enable_cte_response;
+    return &gecko_rsp_msg->data.rsp_cte_transmitter_enable_connection_cte;
 }
 
 /** 
 *
-* gecko_cmd_cte_transmitter_disable_cte_response
+* gecko_cmd_cte_transmitter_disable_connection_cte
 *
 * Disable CTE responses on a connection. 
 *
@@ -8423,33 +8816,33 @@ static inline struct gecko_msg_cte_transmitter_enable_cte_response_rsp_t* gecko_
 *
 **/
 
-static inline struct gecko_msg_cte_transmitter_disable_cte_response_rsp_t* gecko_cmd_cte_transmitter_disable_cte_response(uint8 connection)
+static inline struct gecko_msg_cte_transmitter_disable_connection_cte_rsp_t* gecko_cmd_cte_transmitter_disable_connection_cte(uint8 connection)
 {
     struct gecko_cmd_packet *gecko_cmd_msg = (struct gecko_cmd_packet *)gecko_cmd_msg_buf;
     struct gecko_cmd_packet *gecko_rsp_msg = (struct gecko_cmd_packet *)gecko_rsp_msg_buf;
     
-    gecko_cmd_msg->data.cmd_cte_transmitter_disable_cte_response.connection=connection;
-    gecko_cmd_msg->header=(gecko_cmd_cte_transmitter_disable_cte_response_id+(((1)&0xff)<<8)+(((1)&0x700)>>8));
+    gecko_cmd_msg->data.cmd_cte_transmitter_disable_connection_cte.connection=connection;
+    gecko_cmd_msg->header=(gecko_cmd_cte_transmitter_disable_connection_cte_id+(((1)&0xff)<<8)+(((1)&0x700)>>8));
     
-    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_cte_transmitter_disable_cte_response, &gecko_cmd_msg->data.payload);
+    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_cte_transmitter_disable_connection_cte, &gecko_cmd_msg->data.payload);
     
-    return &gecko_rsp_msg->data.rsp_cte_transmitter_disable_cte_response;
+    return &gecko_rsp_msg->data.rsp_cte_transmitter_disable_connection_cte;
 }
 
 /** 
 *
-* gecko_cmd_cte_transmitter_start_connectionless_cte
+* gecko_cmd_cte_transmitter_enable_connectionless_cte
 *
 * Start connectionless CTE transmit. CTEs will be transmitted in periodic
 * advertisement packets. As a result, a periodic advertising has to be started
 * prior this command. 
 *
-* @param adv   Periodic advertising handle
+* @param handle   Periodic advertising handle
 * @param cte_length   CTE length in 8 us units.
 *  
 *      Range: 0x02 to 0x14  
 *      Time Range: 16 us to 160 us
-* @param cte_type   Requested CTE type
+* @param cte_type   CTE type
 *  
 *      0: AoA CTE  
 *      1: AoD CTE with 1 us slots  
@@ -8462,51 +8855,51 @@ static inline struct gecko_msg_cte_transmitter_disable_cte_response_rsp_t* gecko
 *
 **/
 
-static inline struct gecko_msg_cte_transmitter_start_connectionless_cte_rsp_t* gecko_cmd_cte_transmitter_start_connectionless_cte(uint8 adv,uint8 cte_length,uint8 cte_type,uint8 cte_count,uint8 switching_pattern_len, const uint8* switching_pattern_data)
+static inline struct gecko_msg_cte_transmitter_enable_connectionless_cte_rsp_t* gecko_cmd_cte_transmitter_enable_connectionless_cte(uint8 handle,uint8 cte_length,uint8 cte_type,uint8 cte_count,uint8 switching_pattern_len, const uint8* switching_pattern_data)
 {
     struct gecko_cmd_packet *gecko_cmd_msg = (struct gecko_cmd_packet *)gecko_cmd_msg_buf;
     struct gecko_cmd_packet *gecko_rsp_msg = (struct gecko_cmd_packet *)gecko_rsp_msg_buf;
     if ((uint16_t)switching_pattern_len > 256 - 5)
     {
-        gecko_rsp_msg->data.rsp_cte_transmitter_start_connectionless_cte.result = bg_err_command_too_long;
-        return &gecko_rsp_msg->data.rsp_cte_transmitter_start_connectionless_cte;
+        gecko_rsp_msg->data.rsp_cte_transmitter_enable_connectionless_cte.result = bg_err_command_too_long;
+        return &gecko_rsp_msg->data.rsp_cte_transmitter_enable_connectionless_cte;
     }
 
     
-    gecko_cmd_msg->data.cmd_cte_transmitter_start_connectionless_cte.adv=adv;
-    gecko_cmd_msg->data.cmd_cte_transmitter_start_connectionless_cte.cte_length=cte_length;
-    gecko_cmd_msg->data.cmd_cte_transmitter_start_connectionless_cte.cte_type=cte_type;
-    gecko_cmd_msg->data.cmd_cte_transmitter_start_connectionless_cte.cte_count=cte_count;
-    gecko_cmd_msg->data.cmd_cte_transmitter_start_connectionless_cte.switching_pattern.len=switching_pattern_len;
-    memcpy(gecko_cmd_msg->data.cmd_cte_transmitter_start_connectionless_cte.switching_pattern.data,switching_pattern_data,switching_pattern_len);
-    gecko_cmd_msg->header=(gecko_cmd_cte_transmitter_start_connectionless_cte_id+(((5+switching_pattern_len)&0xff)<<8)+(((5+switching_pattern_len)&0x700)>>8));
+    gecko_cmd_msg->data.cmd_cte_transmitter_enable_connectionless_cte.handle=handle;
+    gecko_cmd_msg->data.cmd_cte_transmitter_enable_connectionless_cte.cte_length=cte_length;
+    gecko_cmd_msg->data.cmd_cte_transmitter_enable_connectionless_cte.cte_type=cte_type;
+    gecko_cmd_msg->data.cmd_cte_transmitter_enable_connectionless_cte.cte_count=cte_count;
+    gecko_cmd_msg->data.cmd_cte_transmitter_enable_connectionless_cte.switching_pattern.len=switching_pattern_len;
+    memcpy(gecko_cmd_msg->data.cmd_cte_transmitter_enable_connectionless_cte.switching_pattern.data,switching_pattern_data,switching_pattern_len);
+    gecko_cmd_msg->header=(gecko_cmd_cte_transmitter_enable_connectionless_cte_id+(((5+switching_pattern_len)&0xff)<<8)+(((5+switching_pattern_len)&0x700)>>8));
     
-    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_cte_transmitter_start_connectionless_cte, &gecko_cmd_msg->data.payload);
+    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_cte_transmitter_enable_connectionless_cte, &gecko_cmd_msg->data.payload);
     
-    return &gecko_rsp_msg->data.rsp_cte_transmitter_start_connectionless_cte;
+    return &gecko_rsp_msg->data.rsp_cte_transmitter_enable_connectionless_cte;
 }
 
 /** 
 *
-* gecko_cmd_cte_transmitter_stop_connectionless_cte
+* gecko_cmd_cte_transmitter_disable_connectionless_cte
 *
 * Stop the connectionless CTE transmit. 
 *
-* @param adv   Periodic advertising handle
+* @param handle   Periodic advertising handle
 *
 **/
 
-static inline struct gecko_msg_cte_transmitter_stop_connectionless_cte_rsp_t* gecko_cmd_cte_transmitter_stop_connectionless_cte(uint8 adv)
+static inline struct gecko_msg_cte_transmitter_disable_connectionless_cte_rsp_t* gecko_cmd_cte_transmitter_disable_connectionless_cte(uint8 handle)
 {
     struct gecko_cmd_packet *gecko_cmd_msg = (struct gecko_cmd_packet *)gecko_cmd_msg_buf;
     struct gecko_cmd_packet *gecko_rsp_msg = (struct gecko_cmd_packet *)gecko_rsp_msg_buf;
     
-    gecko_cmd_msg->data.cmd_cte_transmitter_stop_connectionless_cte.adv=adv;
-    gecko_cmd_msg->header=(gecko_cmd_cte_transmitter_stop_connectionless_cte_id+(((1)&0xff)<<8)+(((1)&0x700)>>8));
+    gecko_cmd_msg->data.cmd_cte_transmitter_disable_connectionless_cte.handle=handle;
+    gecko_cmd_msg->header=(gecko_cmd_cte_transmitter_disable_connectionless_cte_id+(((1)&0xff)<<8)+(((1)&0x700)>>8));
     
-    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_cte_transmitter_stop_connectionless_cte, &gecko_cmd_msg->data.payload);
+    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_cte_transmitter_disable_connectionless_cte, &gecko_cmd_msg->data.payload);
     
-    return &gecko_rsp_msg->data.rsp_cte_transmitter_stop_connectionless_cte;
+    return &gecko_rsp_msg->data.rsp_cte_transmitter_disable_connectionless_cte;
 }
 
 /** 
@@ -8581,6 +8974,80 @@ static inline struct gecko_msg_cte_transmitter_clear_dtm_parameters_rsp_t* gecko
 
 /** 
 *
+* gecko_cmd_cte_transmitter_enable_silabs_cte
+*
+* Enable Silicon Labs CTE transmit. CTEs will be transmitted in extended
+* advertisement packets. As a result, extended advertising has to be started
+* prior this command. 
+*
+* @param handle   Advertising handle
+* @param cte_length   CTE length in 8 us units.
+*  
+*      Range: 0x02 to 0x14  
+*      Time Range: 16 us to 160 us
+* @param cte_type   CTE type
+*  
+*      0: AoA CTE  
+*      1: AoD CTE with 1 us slots  
+*      2: AoD CTE with 2 us slots
+* @param cte_count   The number of CTEs to be transmitted in each extended advertising interval.
+*  Currently only cte_count = 1 is supported.
+* @param switching_pattern_len   Array length
+* @param switching_pattern_data   Antenna switching pattern. Antennas will be switched in this order with the
+*  antenna switch pins during CTE. If the CTE is longer than the switching
+*  pattern, the pattern starts over.
+*
+**/
+
+static inline struct gecko_msg_cte_transmitter_enable_silabs_cte_rsp_t* gecko_cmd_cte_transmitter_enable_silabs_cte(uint8 handle,uint8 cte_length,uint8 cte_type,uint8 cte_count,uint8 switching_pattern_len, const uint8* switching_pattern_data)
+{
+    struct gecko_cmd_packet *gecko_cmd_msg = (struct gecko_cmd_packet *)gecko_cmd_msg_buf;
+    struct gecko_cmd_packet *gecko_rsp_msg = (struct gecko_cmd_packet *)gecko_rsp_msg_buf;
+    if ((uint16_t)switching_pattern_len > 256 - 5)
+    {
+        gecko_rsp_msg->data.rsp_cte_transmitter_enable_silabs_cte.result = bg_err_command_too_long;
+        return &gecko_rsp_msg->data.rsp_cte_transmitter_enable_silabs_cte;
+    }
+
+    
+    gecko_cmd_msg->data.cmd_cte_transmitter_enable_silabs_cte.handle=handle;
+    gecko_cmd_msg->data.cmd_cte_transmitter_enable_silabs_cte.cte_length=cte_length;
+    gecko_cmd_msg->data.cmd_cte_transmitter_enable_silabs_cte.cte_type=cte_type;
+    gecko_cmd_msg->data.cmd_cte_transmitter_enable_silabs_cte.cte_count=cte_count;
+    gecko_cmd_msg->data.cmd_cte_transmitter_enable_silabs_cte.switching_pattern.len=switching_pattern_len;
+    memcpy(gecko_cmd_msg->data.cmd_cte_transmitter_enable_silabs_cte.switching_pattern.data,switching_pattern_data,switching_pattern_len);
+    gecko_cmd_msg->header=(gecko_cmd_cte_transmitter_enable_silabs_cte_id+(((5+switching_pattern_len)&0xff)<<8)+(((5+switching_pattern_len)&0x700)>>8));
+    
+    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_cte_transmitter_enable_silabs_cte, &gecko_cmd_msg->data.payload);
+    
+    return &gecko_rsp_msg->data.rsp_cte_transmitter_enable_silabs_cte;
+}
+
+/** 
+*
+* gecko_cmd_cte_transmitter_disable_silabs_cte
+*
+* Disable Silicon Labs CTE transmit. 
+*
+* @param handle   Advertising handle
+*
+**/
+
+static inline struct gecko_msg_cte_transmitter_disable_silabs_cte_rsp_t* gecko_cmd_cte_transmitter_disable_silabs_cte(uint8 handle)
+{
+    struct gecko_cmd_packet *gecko_cmd_msg = (struct gecko_cmd_packet *)gecko_cmd_msg_buf;
+    struct gecko_cmd_packet *gecko_rsp_msg = (struct gecko_cmd_packet *)gecko_rsp_msg_buf;
+    
+    gecko_cmd_msg->data.cmd_cte_transmitter_disable_silabs_cte.handle=handle;
+    gecko_cmd_msg->header=(gecko_cmd_cte_transmitter_disable_silabs_cte_id+(((1)&0xff)<<8)+(((1)&0x700)>>8));
+    
+    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_cte_transmitter_disable_silabs_cte, &gecko_cmd_msg->data.payload);
+    
+    return &gecko_rsp_msg->data.rsp_cte_transmitter_disable_silabs_cte;
+}
+
+/** 
+*
 * gecko_cmd_cte_receiver_configure
 *
 * Configure the CTE sampling mode. 
@@ -8610,7 +9077,7 @@ static inline struct gecko_msg_cte_receiver_configure_rsp_t* gecko_cmd_cte_recei
 
 /** 
 *
-* gecko_cmd_cte_receiver_start_iq_sampling
+* gecko_cmd_cte_receiver_enable_connection_cte
 *
 * Start IQ samplings on a connection. A CTE requests will be initiated
 * periodically on the given connection and IQ sampling will be made on the
@@ -8641,38 +9108,38 @@ static inline struct gecko_msg_cte_receiver_configure_rsp_t* gecko_cmd_cte_recei
 *
 * Events generated
 *
-* gecko_evt_cte_receiver_iq_report - Triggered when IQ samples have been received.
+* gecko_evt_cte_receiver_connection_iq_report - Triggered when IQ samples have been received.
 *
 **/
 
-static inline struct gecko_msg_cte_receiver_start_iq_sampling_rsp_t* gecko_cmd_cte_receiver_start_iq_sampling(uint8 connection,uint16 interval,uint8 cte_length,uint8 cte_type,uint8 slot_durations,uint8 switching_pattern_len, const uint8* switching_pattern_data)
+static inline struct gecko_msg_cte_receiver_enable_connection_cte_rsp_t* gecko_cmd_cte_receiver_enable_connection_cte(uint8 connection,uint16 interval,uint8 cte_length,uint8 cte_type,uint8 slot_durations,uint8 switching_pattern_len, const uint8* switching_pattern_data)
 {
     struct gecko_cmd_packet *gecko_cmd_msg = (struct gecko_cmd_packet *)gecko_cmd_msg_buf;
     struct gecko_cmd_packet *gecko_rsp_msg = (struct gecko_cmd_packet *)gecko_rsp_msg_buf;
     if ((uint16_t)switching_pattern_len > 256 - 7)
     {
-        gecko_rsp_msg->data.rsp_cte_receiver_start_iq_sampling.result = bg_err_command_too_long;
-        return &gecko_rsp_msg->data.rsp_cte_receiver_start_iq_sampling;
+        gecko_rsp_msg->data.rsp_cte_receiver_enable_connection_cte.result = bg_err_command_too_long;
+        return &gecko_rsp_msg->data.rsp_cte_receiver_enable_connection_cte;
     }
 
     
-    gecko_cmd_msg->data.cmd_cte_receiver_start_iq_sampling.connection=connection;
-    gecko_cmd_msg->data.cmd_cte_receiver_start_iq_sampling.interval=interval;
-    gecko_cmd_msg->data.cmd_cte_receiver_start_iq_sampling.cte_length=cte_length;
-    gecko_cmd_msg->data.cmd_cte_receiver_start_iq_sampling.cte_type=cte_type;
-    gecko_cmd_msg->data.cmd_cte_receiver_start_iq_sampling.slot_durations=slot_durations;
-    gecko_cmd_msg->data.cmd_cte_receiver_start_iq_sampling.switching_pattern.len=switching_pattern_len;
-    memcpy(gecko_cmd_msg->data.cmd_cte_receiver_start_iq_sampling.switching_pattern.data,switching_pattern_data,switching_pattern_len);
-    gecko_cmd_msg->header=(gecko_cmd_cte_receiver_start_iq_sampling_id+(((7+switching_pattern_len)&0xff)<<8)+(((7+switching_pattern_len)&0x700)>>8));
+    gecko_cmd_msg->data.cmd_cte_receiver_enable_connection_cte.connection=connection;
+    gecko_cmd_msg->data.cmd_cte_receiver_enable_connection_cte.interval=interval;
+    gecko_cmd_msg->data.cmd_cte_receiver_enable_connection_cte.cte_length=cte_length;
+    gecko_cmd_msg->data.cmd_cte_receiver_enable_connection_cte.cte_type=cte_type;
+    gecko_cmd_msg->data.cmd_cte_receiver_enable_connection_cte.slot_durations=slot_durations;
+    gecko_cmd_msg->data.cmd_cte_receiver_enable_connection_cte.switching_pattern.len=switching_pattern_len;
+    memcpy(gecko_cmd_msg->data.cmd_cte_receiver_enable_connection_cte.switching_pattern.data,switching_pattern_data,switching_pattern_len);
+    gecko_cmd_msg->header=(gecko_cmd_cte_receiver_enable_connection_cte_id+(((7+switching_pattern_len)&0xff)<<8)+(((7+switching_pattern_len)&0x700)>>8));
     
-    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_cte_receiver_start_iq_sampling, &gecko_cmd_msg->data.payload);
+    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_cte_receiver_enable_connection_cte, &gecko_cmd_msg->data.payload);
     
-    return &gecko_rsp_msg->data.rsp_cte_receiver_start_iq_sampling;
+    return &gecko_rsp_msg->data.rsp_cte_receiver_enable_connection_cte;
 }
 
 /** 
 *
-* gecko_cmd_cte_receiver_stop_iq_sampling
+* gecko_cmd_cte_receiver_disable_connection_cte
 *
 * Stop the IQ sampling on a connection. CTEs will not be requested on the given
 * connection. 
@@ -8681,22 +9148,22 @@ static inline struct gecko_msg_cte_receiver_start_iq_sampling_rsp_t* gecko_cmd_c
 *
 **/
 
-static inline struct gecko_msg_cte_receiver_stop_iq_sampling_rsp_t* gecko_cmd_cte_receiver_stop_iq_sampling(uint8 connection)
+static inline struct gecko_msg_cte_receiver_disable_connection_cte_rsp_t* gecko_cmd_cte_receiver_disable_connection_cte(uint8 connection)
 {
     struct gecko_cmd_packet *gecko_cmd_msg = (struct gecko_cmd_packet *)gecko_cmd_msg_buf;
     struct gecko_cmd_packet *gecko_rsp_msg = (struct gecko_cmd_packet *)gecko_rsp_msg_buf;
     
-    gecko_cmd_msg->data.cmd_cte_receiver_stop_iq_sampling.connection=connection;
-    gecko_cmd_msg->header=(gecko_cmd_cte_receiver_stop_iq_sampling_id+(((1)&0xff)<<8)+(((1)&0x700)>>8));
+    gecko_cmd_msg->data.cmd_cte_receiver_disable_connection_cte.connection=connection;
+    gecko_cmd_msg->header=(gecko_cmd_cte_receiver_disable_connection_cte_id+(((1)&0xff)<<8)+(((1)&0x700)>>8));
     
-    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_cte_receiver_stop_iq_sampling, &gecko_cmd_msg->data.payload);
+    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_cte_receiver_disable_connection_cte, &gecko_cmd_msg->data.payload);
     
-    return &gecko_rsp_msg->data.rsp_cte_receiver_stop_iq_sampling;
+    return &gecko_rsp_msg->data.rsp_cte_receiver_disable_connection_cte;
 }
 
 /** 
 *
-* gecko_cmd_cte_receiver_start_connectionless_iq_sampling
+* gecko_cmd_cte_receiver_enable_connectionless_cte
 *
 * Start IQ sampling on a periodic advertising synchronization. IQ samples are
 * taken on each CTE found in the periodic advertisements. 
@@ -8716,36 +9183,36 @@ static inline struct gecko_msg_cte_receiver_stop_iq_sampling_rsp_t* gecko_cmd_ct
 *
 * Events generated
 *
-* gecko_evt_cte_receiver_iq_report - Triggered when IQ samples have been received.
+* gecko_evt_cte_receiver_connectionless_iq_report - Triggered when IQ samples have been received.
 *
 **/
 
-static inline struct gecko_msg_cte_receiver_start_connectionless_iq_sampling_rsp_t* gecko_cmd_cte_receiver_start_connectionless_iq_sampling(uint8 sync,uint8 slot_durations,uint8 cte_count,uint8 switching_pattern_len, const uint8* switching_pattern_data)
+static inline struct gecko_msg_cte_receiver_enable_connectionless_cte_rsp_t* gecko_cmd_cte_receiver_enable_connectionless_cte(uint8 sync,uint8 slot_durations,uint8 cte_count,uint8 switching_pattern_len, const uint8* switching_pattern_data)
 {
     struct gecko_cmd_packet *gecko_cmd_msg = (struct gecko_cmd_packet *)gecko_cmd_msg_buf;
     struct gecko_cmd_packet *gecko_rsp_msg = (struct gecko_cmd_packet *)gecko_rsp_msg_buf;
     if ((uint16_t)switching_pattern_len > 256 - 4)
     {
-        gecko_rsp_msg->data.rsp_cte_receiver_start_connectionless_iq_sampling.result = bg_err_command_too_long;
-        return &gecko_rsp_msg->data.rsp_cte_receiver_start_connectionless_iq_sampling;
+        gecko_rsp_msg->data.rsp_cte_receiver_enable_connectionless_cte.result = bg_err_command_too_long;
+        return &gecko_rsp_msg->data.rsp_cte_receiver_enable_connectionless_cte;
     }
 
     
-    gecko_cmd_msg->data.cmd_cte_receiver_start_connectionless_iq_sampling.sync=sync;
-    gecko_cmd_msg->data.cmd_cte_receiver_start_connectionless_iq_sampling.slot_durations=slot_durations;
-    gecko_cmd_msg->data.cmd_cte_receiver_start_connectionless_iq_sampling.cte_count=cte_count;
-    gecko_cmd_msg->data.cmd_cte_receiver_start_connectionless_iq_sampling.switching_pattern.len=switching_pattern_len;
-    memcpy(gecko_cmd_msg->data.cmd_cte_receiver_start_connectionless_iq_sampling.switching_pattern.data,switching_pattern_data,switching_pattern_len);
-    gecko_cmd_msg->header=(gecko_cmd_cte_receiver_start_connectionless_iq_sampling_id+(((4+switching_pattern_len)&0xff)<<8)+(((4+switching_pattern_len)&0x700)>>8));
+    gecko_cmd_msg->data.cmd_cte_receiver_enable_connectionless_cte.sync=sync;
+    gecko_cmd_msg->data.cmd_cte_receiver_enable_connectionless_cte.slot_durations=slot_durations;
+    gecko_cmd_msg->data.cmd_cte_receiver_enable_connectionless_cte.cte_count=cte_count;
+    gecko_cmd_msg->data.cmd_cte_receiver_enable_connectionless_cte.switching_pattern.len=switching_pattern_len;
+    memcpy(gecko_cmd_msg->data.cmd_cte_receiver_enable_connectionless_cte.switching_pattern.data,switching_pattern_data,switching_pattern_len);
+    gecko_cmd_msg->header=(gecko_cmd_cte_receiver_enable_connectionless_cte_id+(((4+switching_pattern_len)&0xff)<<8)+(((4+switching_pattern_len)&0x700)>>8));
     
-    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_cte_receiver_start_connectionless_iq_sampling, &gecko_cmd_msg->data.payload);
+    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_cte_receiver_enable_connectionless_cte, &gecko_cmd_msg->data.payload);
     
-    return &gecko_rsp_msg->data.rsp_cte_receiver_start_connectionless_iq_sampling;
+    return &gecko_rsp_msg->data.rsp_cte_receiver_enable_connectionless_cte;
 }
 
 /** 
 *
-* gecko_cmd_cte_receiver_stop_connectionless_iq_sampling
+* gecko_cmd_cte_receiver_disable_connectionless_cte
 *
 * Stop IQ sampling on a periodic advertising synchronization. 
 *
@@ -8753,17 +9220,17 @@ static inline struct gecko_msg_cte_receiver_start_connectionless_iq_sampling_rsp
 *
 **/
 
-static inline struct gecko_msg_cte_receiver_stop_connectionless_iq_sampling_rsp_t* gecko_cmd_cte_receiver_stop_connectionless_iq_sampling(uint8 sync)
+static inline struct gecko_msg_cte_receiver_disable_connectionless_cte_rsp_t* gecko_cmd_cte_receiver_disable_connectionless_cte(uint8 sync)
 {
     struct gecko_cmd_packet *gecko_cmd_msg = (struct gecko_cmd_packet *)gecko_cmd_msg_buf;
     struct gecko_cmd_packet *gecko_rsp_msg = (struct gecko_cmd_packet *)gecko_rsp_msg_buf;
     
-    gecko_cmd_msg->data.cmd_cte_receiver_stop_connectionless_iq_sampling.sync=sync;
-    gecko_cmd_msg->header=(gecko_cmd_cte_receiver_stop_connectionless_iq_sampling_id+(((1)&0xff)<<8)+(((1)&0x700)>>8));
+    gecko_cmd_msg->data.cmd_cte_receiver_disable_connectionless_cte.sync=sync;
+    gecko_cmd_msg->header=(gecko_cmd_cte_receiver_disable_connectionless_cte_id+(((1)&0xff)<<8)+(((1)&0x700)>>8));
     
-    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_cte_receiver_stop_connectionless_iq_sampling, &gecko_cmd_msg->data.payload);
+    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_cte_receiver_disable_connectionless_cte, &gecko_cmd_msg->data.payload);
     
-    return &gecko_rsp_msg->data.rsp_cte_receiver_stop_connectionless_iq_sampling;
+    return &gecko_rsp_msg->data.rsp_cte_receiver_disable_connectionless_cte;
 }
 
 /** 
@@ -8795,6 +9262,10 @@ static inline struct gecko_msg_cte_receiver_stop_connectionless_iq_sampling_rsp_
 * @param switching_pattern_data   Antenna switching pattern. Antennas will be switched in this order with the
 *  antenna switch pins during CTE. If the CTE is longer than the switching
 *  pattern, the pattern starts over. Default: empty array
+*
+* Events generated
+*
+* gecko_evt_cte_receiver_dtm_iq_report - Triggered when IQ samples have been received.
 *
 **/
 
@@ -8841,6 +9312,73 @@ static inline struct gecko_msg_cte_receiver_clear_dtm_parameters_rsp_t* gecko_cm
     sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_cte_receiver_clear_dtm_parameters, &gecko_cmd_msg->data.payload);
     
     return &gecko_rsp_msg->data.rsp_cte_receiver_clear_dtm_parameters;
+}
+
+/** 
+*
+* gecko_cmd_cte_receiver_enable_silabs_cte
+*
+* Enable IQ sampling of Silicon Labs CTE found in extended advertisements. 
+*
+* @param slot_durations   Slot durations
+*  
+*      1: Switching and sampling slots are 1 us each  
+*      2: Switching and sampling slots are 2 us each
+* @param cte_count   * 0: Sample and report all available CTEs  
+*      Other values: Maximum number of sampled CTEs in each extended advertising
+*      interval
+* @param switching_pattern_len   Array length
+* @param switching_pattern_data   Antenna switching pattern. Antennas will be switched in this order with the
+*  antenna switch pins during CTE. If the CTE is longer than the switching
+*  pattern, the pattern starts over.
+*
+* Events generated
+*
+* gecko_evt_cte_receiver_silabs_iq_report - Triggered when IQ samples of Silicon Labs CTE have been received.
+*
+**/
+
+static inline struct gecko_msg_cte_receiver_enable_silabs_cte_rsp_t* gecko_cmd_cte_receiver_enable_silabs_cte(uint8 slot_durations,uint8 cte_count,uint8 switching_pattern_len, const uint8* switching_pattern_data)
+{
+    struct gecko_cmd_packet *gecko_cmd_msg = (struct gecko_cmd_packet *)gecko_cmd_msg_buf;
+    struct gecko_cmd_packet *gecko_rsp_msg = (struct gecko_cmd_packet *)gecko_rsp_msg_buf;
+    if ((uint16_t)switching_pattern_len > 256 - 3)
+    {
+        gecko_rsp_msg->data.rsp_cte_receiver_enable_silabs_cte.result = bg_err_command_too_long;
+        return &gecko_rsp_msg->data.rsp_cte_receiver_enable_silabs_cte;
+    }
+
+    
+    gecko_cmd_msg->data.cmd_cte_receiver_enable_silabs_cte.slot_durations=slot_durations;
+    gecko_cmd_msg->data.cmd_cte_receiver_enable_silabs_cte.cte_count=cte_count;
+    gecko_cmd_msg->data.cmd_cte_receiver_enable_silabs_cte.switching_pattern.len=switching_pattern_len;
+    memcpy(gecko_cmd_msg->data.cmd_cte_receiver_enable_silabs_cte.switching_pattern.data,switching_pattern_data,switching_pattern_len);
+    gecko_cmd_msg->header=(gecko_cmd_cte_receiver_enable_silabs_cte_id+(((3+switching_pattern_len)&0xff)<<8)+(((3+switching_pattern_len)&0x700)>>8));
+    
+    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_cte_receiver_enable_silabs_cte, &gecko_cmd_msg->data.payload);
+    
+    return &gecko_rsp_msg->data.rsp_cte_receiver_enable_silabs_cte;
+}
+
+/** 
+*
+* gecko_cmd_cte_receiver_disable_silabs_cte
+*
+* Disable IQ sampling of Silicon Labs CTE. 
+*
+*
+**/
+
+static inline struct gecko_msg_cte_receiver_disable_silabs_cte_rsp_t* gecko_cmd_cte_receiver_disable_silabs_cte()
+{
+    struct gecko_cmd_packet *gecko_cmd_msg = (struct gecko_cmd_packet *)gecko_cmd_msg_buf;
+    struct gecko_cmd_packet *gecko_rsp_msg = (struct gecko_cmd_packet *)gecko_rsp_msg_buf;
+    
+    gecko_cmd_msg->header=(gecko_cmd_cte_receiver_disable_silabs_cte_id+(((0)&0xff)<<8)+(((0)&0x700)>>8));
+    
+    sli_bt_cmd_handler_rtos_delegate(gecko_cmd_msg->header, sli_bt_cmd_cte_receiver_disable_silabs_cte, &gecko_cmd_msg->data.payload);
+    
+    return &gecko_rsp_msg->data.rsp_cte_receiver_disable_silabs_cte;
 }
 #ifdef __cplusplus
 }

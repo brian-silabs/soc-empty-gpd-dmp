@@ -125,19 +125,6 @@ static void initMcu_clocks(void)
   CMU_ClockEnable(cmuClock_HFLE, true);
 
 
-  //To use PLFRCO please remove commenting of these lines
-  //and comment out or delete the LFXO lines if they are present
-  //If using PLFRCO update gecko_configuration_t config's
-  //.bluetooth.sleep_clock_accuracy to 500 (ppm)
-//  #if defined(PLFRCO_PRESENT)
-//    /* Ensure LE modules are accessible */
-//    CMU_ClockEnable(cmuClock_CORELE, true);
-//    /* Enable PLFRCO as LFECLK in CMU (will also enable oscillator if not enabled) */
-//    CMU_ClockSelectSet(cmuClock_LFA, cmuSelect_PLFRCO);
-//    CMU_ClockSelectSet(cmuClock_LFB, cmuSelect_PLFRCO);
-//    CMU_ClockSelectSet(cmuClock_LFE, cmuSelect_PLFRCO);
-//  #endif
-
   // Initialize LFXO
   CMU_LFXOInit_TypeDef lfxoInit = BSP_CLK_LFXO_INIT;
   lfxoInit.ctune = BSP_CLK_LFXO_CTUNE;
@@ -177,7 +164,4 @@ static void initHFXO(void)
   }
 #endif
   CMU_HFXOInit(&hfxoInit);
-
-  // Set system HFXO frequency
-  SystemHFXOClockSet(BSP_CLK_HFXO_FREQ);
 }

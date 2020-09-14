@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <em_device.h>
 #include <kernel/include/os.h>
@@ -56,16 +57,17 @@ static  CPU_STK           BluetoothTaskStk[BLUETOOTH_STACK_SIZE];
 static  void  LinklayerTask (void  *p_arg);
 static  OS_TCB            LinklayerTaskTCB;
 static  CPU_STK           LinklayerTaskStk[LINKLAYER_STACK_SIZE];
-//
-#define RTOS_TICK_HZ  1024
-#define BLUETOOTH_TICK_HZ  32768
-#define BLUETOOTH_TO_RTOS_TICK  (BLUETOOTH_TICK_HZ / RTOS_TICK_HZ)
+
+static uint32_t sleeptimer_tick_to_os_tick()
+{
+  return sl_sleeptimer_get_timer_frequency() / OSCfg_TickRate_Hz;
+}
 
 static volatile wakeupCallback wakeupCB = NULL;
 // Set the task to post semaphore
 void BluetoothSetWakeupCallback(wakeupCallback cb)
 {
-  wakeupCB = (volatile wakeupCallback)cb;
+  wakeupCB = cb;
 }
 OS_FLAG_GRP bluetooth_event_flags;
 
@@ -166,12 +168,13 @@ void BluetoothTask(void *p)
     if (timeout == 0 && (flags & BLUETOOTH_EVENT_FLAG_EVT_HANDLED)) {
       continue;
     }
+
     //OSFlagPend expects 0 to be indefinite
     if (timeout == UINT32_MAX) {
       timeout = 0;
     } else {
       //round up to RTOS ticks
-      timeout = (timeout + BLUETOOTH_TO_RTOS_TICK - 1) / BLUETOOTH_TO_RTOS_TICK;
+      timeout = (timeout + sleeptimer_tick_to_os_tick() - 1) / sleeptimer_tick_to_os_tick();
     }
     flags |= OSFlagPend(&bluetooth_event_flags,
                         (OS_FLAGS)BLUETOOTH_EVENT_FLAG_STACK + BLUETOOTH_EVENT_FLAG_EVT_HANDLED + BLUETOOTH_EVENT_FLAG_CMD_WAITING,

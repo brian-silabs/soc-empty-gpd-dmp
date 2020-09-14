@@ -56,7 +56,7 @@ struct slist_member {
 #define  SLIST_FOR_EACH(list_head, iterator)          for ((iterator) = (list_head); (iterator) != DEF_NULL; (iterator) = (iterator)->p_next)
 
 #define  SLIST_FOR_EACH_ENTRY(list_head, entry, type, member) for (  (entry) = SLIST_ENTRY(list_head, type, member); \
-                                                                     &((entry)->member) != DEF_NULL;                 \
+                                                                     (type *)(entry) != SLIST_ENTRY(DEF_NULL, type, member);    \
                                                                      (entry) = SLIST_ENTRY((entry)->member.p_next, type, member))
 
 #if (RTOS_TOOLCHAIN_NAME == RTOS_TOOLCHAIN_WIN32)

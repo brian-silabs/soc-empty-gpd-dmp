@@ -47,6 +47,16 @@ const CPU_CHAR *os_task__c = "$Id: $";
  ********************************************************************************************************
  *******************************************************************************************************/
 
+/********************************************************************************************************
+ ********************************************************************************************************
+ *                                       LOCAL GLOBAL VARIABLES
+ ********************************************************************************************************
+ *******************************************************************************************************/
+
+#if  (OS_CFG_SCHED_ROUND_ROBIN_EN == DEF_ENABLED)
+OS_EXT sl_sleeptimer_timer_handle_t OSRoundRobinTimer;
+#endif
+
 /****************************************************************************************************//**
  *                                           OSTaskChangePrio()
  *
@@ -318,9 +328,9 @@ void OSTaskCreate(OS_TCB       *p_tcb,
 #if (OS_CFG_SCHED_ROUND_ROBIN_EN == DEF_ENABLED)
   p_tcb->TimeQuanta = time_quanta;                              // Save the #ticks for time slice (0 means not sliced)
   if (time_quanta == 0u) {
-    p_tcb->TimeQuantaCtr = OSSchedRoundRobinDfltTimeQuanta;
+    p_tcb->TimeQuantaCtr = (uint64_t)(((uint64_t)OSSchedRoundRobinDfltTimeQuanta * (uint64_t)sl_sleeptimer_get_timer_frequency()) + (OSCfg_TickRate_Hz - 1u)) / OSCfg_TickRate_Hz;
   } else {
-    p_tcb->TimeQuantaCtr = time_quanta;
+    p_tcb->TimeQuantaCtr = (uint64_t)(((uint64_t)p_tcb->TimeQuanta * (uint64_t)sl_sleeptimer_get_timer_frequency()) + (OSCfg_TickRate_Hz - 1u)) / OSCfg_TickRate_Hz;
   }
 #else
   (void)&time_quanta;
@@ -1903,6 +1913,7 @@ void OSTaskTimeQuantaSet(OS_TCB   *p_tcb,
                          OS_TICK  time_quanta,
                          RTOS_ERR *p_err)
 {
+  uint32_t time_remain;
   CORE_DECLARE_IRQ_STATE;
 
   OS_ASSERT_DBG_ERR_PTR_VALIDATE(p_err,; );
@@ -1910,22 +1921,35 @@ void OSTaskTimeQuantaSet(OS_TCB   *p_tcb,
                                                                 // Not allowed to call from an ISR
   OS_ASSERT_DBG_ERR_SET((!CORE_InIrqContext()), *p_err, RTOS_ERR_ISR, ;);
 
+  if (OSSchedRoundRobinEn != DEF_TRUE) {                        // Make sure round-robin has been enabled
+    return;
+  }
+
   CORE_ENTER_ATOMIC();
   if (p_tcb == DEF_NULL) {
     p_tcb = OSTCBCurPtr;
   }
 
   if (time_quanta == 0u) {
-    p_tcb->TimeQuanta = OSSchedRoundRobinDfltTimeQuanta;
+    p_tcb->TimeQuanta = (uint64_t)(((uint64_t)OSSchedRoundRobinDfltTimeQuanta * (uint64_t)sl_sleeptimer_get_timer_frequency()) + (OSCfg_TickRate_Hz - 1u)) / OSCfg_TickRate_Hz;
   } else {
-    p_tcb->TimeQuanta = time_quanta;
+    p_tcb->TimeQuanta = (uint64_t)(((uint64_t)(time_quanta) * (uint64_t)sl_sleeptimer_get_timer_frequency()) + (OSCfg_TickRate_Hz - 1u)) / OSCfg_TickRate_Hz;
   }
+
   if (p_tcb->TimeQuanta > p_tcb->TimeQuantaCtr) {
     p_tcb->TimeQuantaCtr = p_tcb->TimeQuanta;
+  }
 
-    if (p_tcb == OSTCBCurPtr) {
-      OS_SchedRoundRobinRestartTimer(p_tcb);
+  if (p_tcb == OSTCBCurPtr) {
+
+    sl_status_t status;
+    status = sl_sleeptimer_get_timer_time_remaining(&OSRoundRobinTimer, &time_remain);
+    if (status == SL_STATUS_OK) {
+      p_tcb->TimeQuantaCtr = DEF_MIN(time_remain, p_tcb->TimeQuanta);
+      sl_sleeptimer_stop_timer(&OSRoundRobinTimer);
     }
+
+    OS_SchedRoundRobinRestartTimer(p_tcb);
   }
 
   CORE_EXIT_ATOMIC();
@@ -2032,6 +2056,8 @@ void OS_TaskInit(RTOS_ERR *p_err)
  *******************************************************************************************************/
 void OS_TaskInitTCB(OS_TCB *p_tcb)
 {
+  *p_tcb = (OS_TCB){0};
+  
 #if (OS_CFG_TASK_REG_TBL_SIZE > 0u)
   OS_REG_ID reg_id;
 #endif
@@ -2146,13 +2172,6 @@ void OS_TaskInitTCB(OS_TCB *p_tcb)
   p_tcb->CyclesTotal = 0u;
 #endif
 
-#if (OS_CFG_SCHED_LOCK_TIME_MEAS_EN == DEF_ENABLED)
-  p_tcb->SchedLockTimeMax = 0u;
-#endif
-
-  p_tcb->PendNextPtr = DEF_NULL;
-  p_tcb->PendPrevPtr = DEF_NULL;
-  p_tcb->PendObjPtr = DEF_NULL;
   p_tcb->PendOn = OS_TASK_PEND_ON_NOTHING;
   p_tcb->PendStatus = OS_STATUS_PEND_OK;
   p_tcb->TaskState = OS_TASK_STATE_RDY;

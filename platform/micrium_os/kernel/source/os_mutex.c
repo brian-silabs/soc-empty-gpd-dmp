@@ -85,6 +85,8 @@ void OSMutexCreate(OS_MUTEX *p_mutex,
   OS_ASSERT_DBG_ERR_SET((p_mutex != DEF_NULL), *p_err, RTOS_ERR_NULL_PTR,; );
 
   CORE_ENTER_ATOMIC();
+
+  *p_mutex = (OS_MUTEX){0};
 #if (OS_OBJ_TYPE_REQ == DEF_ENABLED)
   p_mutex->Type = OS_OBJ_TYPE_MUTEX;                            // Mark the data structure as a mutex
 #endif
@@ -92,12 +94,6 @@ void OSMutexCreate(OS_MUTEX *p_mutex,
   p_mutex->NamePtr = p_name;
 #else
   (void)&p_name;
-#endif
-  p_mutex->MutexGrpNextPtr = DEF_NULL;
-  p_mutex->OwnerTCBPtr = DEF_NULL;
-  p_mutex->OwnerNestingCtr = 0u;                                // Mutex is available
-#if (OS_CFG_TS_EN == DEF_ENABLED)
-  p_mutex->TS = 0u;
 #endif
   OS_PendListInit(&p_mutex->PendList);                          // Initialize the waiting list
 

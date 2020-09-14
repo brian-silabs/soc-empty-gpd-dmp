@@ -290,7 +290,8 @@ PendSV_Handler:
     MOVT    R1, #:upper16:OS_TaskReturn
     STR     R1, [R0, #20]
 
-    BIC     LR,  R4, #0x04                                      @ Ensure exception return uses master stack
+    MOVW    LR, #:lower16:0xFFFFFFF9                            @ Exception return uses master stack/process mode/basic frame
+    MOVT    LR, #:upper16:0xFFFFFFF9
 
 .end_context_restore:
     CPSIE   I

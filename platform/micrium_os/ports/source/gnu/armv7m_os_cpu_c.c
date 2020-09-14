@@ -423,6 +423,15 @@ void OSTaskSwHook(void)
   CPU_BOOLEAN stk_status;
 #endif
 
+#if (OS_CFG_SCHED_ROUND_ROBIN_EN == DEF_ENABLED)
+  if (OSSchedRoundRobinEn) {
+    if (OSTCBHighRdyPtr->TimeQuantaCtr == 0u) {
+      OS_SchedRoundRobinResetQuanta(OSTCBHighRdyPtr);
+    }
+    OS_SchedRoundRobinRestartTimer(OSTCBHighRdyPtr);
+  }
+#endif
+
 #if OS_CFG_APP_HOOKS_EN > 0u
   if (OS_AppTaskSwHookPtr != (OS_APP_HOOK_VOID)0) {
     (*OS_AppTaskSwHookPtr)();

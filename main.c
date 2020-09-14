@@ -258,10 +258,12 @@ int main(void)
  * ready to run. We just enter the lowest possible energy mode.
  ******************************************************************************/
 void SleepAndSyncProtimer(void);
-void OSIdleEnterHook(void)
+void OSIdleContextHook(void)
 {
-  // Put MCU in the lowest sleep mode available, usually EM2.
-  SleepAndSyncProtimer();
+  while (1) {
+    /* Put MCU in the lowest sleep mode available, usually EM2 */
+    SleepAndSyncProtimer();
+  }
 }
 
 /***************************************************************************//**
@@ -389,7 +391,7 @@ static void bluetoothAppTask(void *p_arg)
         // The next two parameters are minimum and maximum advertising
         // interval, both in units of (milliseconds * 1.6).
         // The last two parameters are duration and maxevents left as default.
-        pRspAdvT = gecko_cmd_le_gap_set_advertise_timing(0, 160, 160, 0, 0);
+        pRspAdvT = gecko_cmd_le_gap_set_advertise_timing(0, 1600, 1600, 0, 0);
         APP_ASSERT_DBG((pRspAdvT->result == bg_err_success), pRspAdvT->result);
         // Start general advertising and enable connections.
         pRspAdv = gecko_cmd_le_gap_start_advertising(0,

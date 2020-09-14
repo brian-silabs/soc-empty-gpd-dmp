@@ -133,20 +133,15 @@ OS_MSG_QTY OS_MsgQFreeAll(OS_MSG_Q *p_msg_q)
  *
  * @param    p_msg_q     Pointer to the message queue to initialize.
  *
- * @param    max         The maximum number of entries that the message queue can have.
+ * @param    size        The maximum number of entries that the message queue can have.
  *
  * @note     (1) This function is INTERNAL to the Kernel and your application MUST NOT call it.
  *******************************************************************************************************/
 void OS_MsgQInit(OS_MSG_Q   *p_msg_q,
                  OS_MSG_QTY size)
 {
+  *p_msg_q = (OS_MSG_Q){0};
   p_msg_q->NbrEntriesSize = size;
-  p_msg_q->NbrEntries = 0u;
-#if (OS_CFG_DBG_EN == DEF_ENABLED)
-  p_msg_q->NbrEntriesMax = 0u;
-#endif
-  p_msg_q->InPtr = DEF_NULL;
-  p_msg_q->OutPtr = DEF_NULL;
 }
 
 /****************************************************************************************************//**

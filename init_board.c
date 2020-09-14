@@ -77,3 +77,11 @@ void initBoard(void)
   MX25_deinit();
 
 }
+
+void initVcomEnable(void)
+{
+#if defined(HAL_VCOM_ENABLE)
+  // Enable VCOM if requested
+  GPIO_PinModeSet(BSP_VCOM_ENABLE_PORT, BSP_VCOM_ENABLE_PIN, gpioModePushPull, HAL_VCOM_ENABLE);
+#endif // HAL_VCOM_ENABLE
+}

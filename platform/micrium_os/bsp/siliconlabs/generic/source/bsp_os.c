@@ -237,6 +237,7 @@ void BSP_SystemInit(void)
   #error "The definition of BSP_LF_CLK_SEL in bsp_cfg.h is not handled."
 #endif
 
+#if ((SL_SLEEPTIMER_PERIPHERAL == SL_SLEEPTIMER_PERIPHERAL_RTCC) || (SL_SLEEPTIMER_PERIPHERAL == SL_SLEEPTIMER_PERIPHERAL_RTC))
 #if (SL_SLEEPTIMER_PERIPHERAL == SL_SLEEPTIMER_PERIPHERAL_RTCC)
   #if defined(_SILICON_LABS_32B_SERIES_2)
     sleeptimer_clock = cmuClock_RTCC;
@@ -245,12 +246,14 @@ void BSP_SystemInit(void)
   #endif
 #elif (SL_SLEEPTIMER_PERIPHERAL == SL_SLEEPTIMER_PERIPHERAL_RTC)
   sleeptimer_clock = cmuClock_LFA;
-#else
+#endif
+
+  CMU_ClockSelectSet(sleeptimer_clock, sleeptimer_select);
+#elif (SL_SLEEPTIMER_PERIPHERAL != SL_SLEEPTIMER_PERIPHERAL_PRORTC)
   #error "Invalid peripheral selected for SL_SLEEPTIMER in sl_sleeptimer_config.h"
 #endif
 
   CMU_OscillatorEnable(sleeptimer_osc, true, false);
-  CMU_ClockSelectSet(sleeptimer_clock, sleeptimer_select);
 }
 
 /********************************************************************************************************
