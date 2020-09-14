@@ -5,7 +5,7 @@ This projects aims to be a simple demonstrator of Silabs GPD implementation over
 I tried to use the majority of the existing code to avoid any trouble in importing the future GPD stacks 
 
 Toolchain - GCC 7.2.1
-Gecko SDK Suite 2.7.0
+Gecko SDK Suite 2.7.7
 
 ## What has been done
   1. Used soc-empty-rail-dmp as reference
@@ -49,6 +49,9 @@ NB: Any change to the .ISC will re-integrate the libmbedtls.a to the .cproject f
 
 3. Re-wrote the architecture to enable Cryptographic calls due to RX phases
 
+4. Issue where Low Power is not supported, even on sample app
+   Updated sources to Gecko SDK Suite 2.7.7 except for GPD sources
+
 
 ## Known issues :
   * The GP Sink Sends the Commissioning Repliess too late (~ 74ms)
@@ -56,7 +59,6 @@ NB: Any change to the .ISC will re-integrate the libmbedtls.a to the .cproject f
     If it is a wrong frame, another RXafterTX cycle is needed
   * (Check if real issue) RxAfterTx flag is always set even for operationnal commands
   * Issue where calling RAIL_Idle after TX using the MP lib aborts TX
-  * Issue where Low Power is not supported, even on sample app
 
 ## Disclaimer ##
 
