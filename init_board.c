@@ -70,11 +70,11 @@ void initBoard(void)
            || (HAL_USART1_ENABLE == 1) \
            || (HAL_USART0_ENABLE == 1)) */
 
-  // Put the SPI flash into Deep Power Down mode for those radio boards where it is available
-  MX25_init();
-  MX25_DP();
-  // We must disable SPI communication
-  MX25_deinit();
+//  // Put the SPI flash into Deep Power Down mode for those radio boards where it is available
+//  MX25_init();
+//  MX25_DP();
+//  // We must disable SPI communication
+//  MX25_deinit();
 
 }
 
