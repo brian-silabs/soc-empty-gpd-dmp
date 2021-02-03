@@ -30,12 +30,12 @@
 
 
 // Custom macros
-#define BRD4161A  1
+#define CUSTOM_BOARD  1
 
 #ifdef EMBER_AF_BOARD_TYPE
 #undef EMBER_AF_BOARD_TYPE
 #endif
-#define EMBER_AF_BOARD_TYPE BRD4161A
+#define EMBER_AF_BOARD_TYPE CUSTOM_BOARD
 
 
 #endif // __BLE_CONFIG__

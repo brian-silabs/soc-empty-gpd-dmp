@@ -501,7 +501,7 @@
 // #define FEATURE_PTI_SUPPORT
 // #define FEATURE_HW_FLOW_CONTROL
 // #define FEATURE_I2C_SENSOR
-// #define FEATURE_LFXO
+ #define FEATURE_LFXO
 // #define FEATURE_EFP
 // #define FEATURE_BOARD_DETECTED
 #endif
